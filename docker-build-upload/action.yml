@@ -34,11 +34,6 @@ runs:
         --query "repositories[0].repositoryUri" ||
         aws ecr create-repository --repository-name ${{ github.event.repository.name }}
 
-    - name: Get image tag
-      uses: Phoenix365-tech/actions/set-image-tag@v3
-      with:
-        image_tag: ${{ inputs.image_tag }}
-
     - name: Build docker image
       id: docker-build
       shell: bash
