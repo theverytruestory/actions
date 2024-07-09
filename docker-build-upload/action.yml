@@ -1,0 +1,56 @@
+name: "Docker build and upload to ECR"
+description: "This will build docker image and upload it to ECR"
+inputs:
+  docker_file:
+    description: "Path to dockerfile"
+    required: false
+    default: "./Dockerfile"
+  image_tag:
+    description: "custom image tag"
+    required: false
+    default: ""
+  ecr:
+    description: "ecr repo"
+    required: false
+    default: 648358337825.dkr.ecr.eu-central-1.amazonaws.com
+
+outputs:
+  ecr_uri:
+    description: "Image link"
+    value: ${{ steps.docker-build.outputs.image_link }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: eu-central-1
+
+    - name: Get or create ECR repository
+      shell: bash
+      run: >
+        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }}
+        --query "repositories[0].repositoryUri" ||
+        aws ecr create-repository --repository-name ${{ github.event.repository.name }}
+
+    - name: Get image tag
+      uses: Phoenix365-tech/actions/set-image-tag@v3
+      with:
+        image_tag: ${{ inputs.image_tag }}
+
+    - name: Build docker image
+      id: docker-build
+      shell: bash
+      run: |
+        echo "::group::Build docker image"
+        IMAGE="${{ inputs.ecr }}/${{ github.event.repository.name }}:${{ env.image_tag }}"
+        docker build . --file ${{ inputs.docker_file }} -t ${IMAGE}
+        aws ecr get-login-password | docker login --username AWS --password-stdin ${{ inputs.ecr }}
+        docker push ${IMAGE}
+        echo "image_link=${IMAGE}" >> $GITHUB_OUTPUT
+        echo "::endgroup::"
+
+    - name: Display image URI
+      shell: bash
+      run: echo "::notice::${{ steps.docker-build.outputs.image_link }}"
