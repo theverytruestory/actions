@@ -25,9 +25,10 @@ runs:
     - name: Get or create ECR repository
       shell: bash
       run: >
-        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }}
-        --query "repositories[0].repositoryUri" ||
-        aws ecr create-repository --repository-name ${{ github.event.repository.name }}
+        ( aws ecr describe-repositories --repository-names ${{ github.event.repository.name }}
+        --query "repositories[0].repositoryUri" || aws ecr describe-repositories --repository-names $( echo ${{ github.event.repository.name }} | tr '-' '_' )
+        --query "repositories[0].repositoryUri" ) || echo "aws ecr create-repository --repository-name ${{ github.event.repository.name }}"
+        # aws ecr create-repository --repository-name ${{ github.event.repository.name }}
 
     - name: Build docker image
       id: docker-build
