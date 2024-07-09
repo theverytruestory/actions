@@ -12,7 +12,7 @@ inputs:
   ecr:
     description: "ecr repo"
     required: false
-    default: 648358337825.dkr.ecr.eu-central-1.amazonaws.com
+    default: 648358337825.dkr.ecr.eu-north-1.amazonaws.com
 
 outputs:
   ecr_uri:
@@ -22,11 +22,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: eu-central-1
-
     - name: Get or create ECR repository
       shell: bash
       run: >
