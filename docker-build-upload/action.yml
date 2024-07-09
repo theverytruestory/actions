@@ -32,7 +32,7 @@ runs:
       run: |
         image_tag=$(git rev-parse --short HEAD) && echo "image_tag=${image_tag}" >> $GITHUB_ENV
         ecr=648358337825.dkr.ecr.eu-north-1.amazonaws.com && echo "ecr=${ecr}" >> $GITHUB_ENV
-        echo "image_url="${ ecr }/${{ github.event.repository.name }}:${ image_tag }" >> $GITHUB_ENV
+        echo "image_url=${ecr}/${{ github.event.repository.name }}:${image_tag}" >> $GITHUB_ENV
         echo "ecr_password=$(aws ecr get-login-password)" >> $GITHUB_ENV
 
     - name: Set up QEMU
