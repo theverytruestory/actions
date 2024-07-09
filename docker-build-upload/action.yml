@@ -29,6 +29,7 @@ runs:
         --query "repositories[0].repositoryUri" || aws ecr create-repository --repository-name ${{ github.event.repository.name }}
 
     - name: Get image tag
+      shell: bash
       run: |
         echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         echo "ecr=648358337825.dkr.ecr.eu-north-1.amazonaws.com" >> $GITHUB_ENV
