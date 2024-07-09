@@ -22,6 +22,12 @@ outputs:
 runs:
   using: "composite"
   steps:
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: eu-north-1
+        
     - name: Get or create ECR repository
       shell: bash
       run: >
