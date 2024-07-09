@@ -25,19 +25,22 @@ runs:
     - name: Get or create ECR repository
       shell: bash
       run: >
-        ( aws ecr describe-repositories --repository-names ${{ github.event.repository.name }}
-        --query "repositories[0].repositoryUri" || aws ecr describe-repositories --repository-names $( echo ${{ github.event.repository.name }} | tr '-' '_' )
-        --query "repositories[0].repositoryUri" ) || echo "aws ecr create-repository --repository-name ${{ github.event.repository.name }}"
-        # aws ecr create-repository --repository-name ${{ github.event.repository.name }}
+        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }}
+        --query "repositories[0].repositoryUri" || aws ecr create-repository --repository-name ${{ github.event.repository.name }}
+
+    - name: Get image tag
+      run: |
+        echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "ecr=648358337825.dkr.ecr.eu-north-1.amazonaws.com" >> $GITHUB_ENV
 
     - name: Build docker image
       id: docker-build
       shell: bash
       run: |
         echo "::group::Build docker image"
-        IMAGE="${{ inputs.ecr }}/${{ github.event.repository.name }}:${{ env.image_tag }}"
+        IMAGE="${{ env.ecr }}/${{ github.event.repository.name }}:${{ env.image_tag }}"
         docker build . --file ${{ inputs.docker_file }} -t ${IMAGE}
-        aws ecr get-login-password | docker login --username AWS --password-stdin ${{ inputs.ecr }}
+        aws ecr get-login-password | docker login --username AWS --password-stdin ${{ env.ecr }}
         docker push ${IMAGE}
         echo "image_link=${IMAGE}" >> $GITHUB_OUTPUT
         echo "::endgroup::"
