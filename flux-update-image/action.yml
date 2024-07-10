@@ -1,0 +1,61 @@
+name: "Update flux image and deploy on kube"
+description: "This action will update docker image id and deploy in on K8s"
+
+inputs:
+  cluster:
+    description: "cluster to deploy"
+    required: false
+    default: "truestory"
+  kubeconfig:
+    description: "path to kubeconfig"
+    required: false
+    default: "~/.kube/kubeconfig"
+  image_tag:
+    description: "Image tag to deploy"
+    required: true
+    default: latest
+  token:
+    description: "token to access private repos"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: "Clean flux dir"
+      shell: bash
+      run: rm -rf ./flux
+
+    - name: "Checkout flux"
+      uses: actions/checkout@v4
+      with:
+        ssh-key: ${{ secrets.DEPLOY_KEY }}
+        repository: theverytruestory/flux
+        path: flux
+        sparse-checkout: ''
+
+    - name: Copy manifest to flux repo
+      shell: bash
+      run: |
+        GIT_PAGER=cat git diff --no-index fluxcd/clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml ${{ github.workspace }}/manifest.yaml -U0 --color=always || true
+        cp ${{ github.workspace }}/manifest.yaml fluxcd/clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml
+
+    - name: Commit and push manifest to fluxcd repo
+      shell: bash
+      run: |
+        cd fluxcd
+        git config user.name "Fluxcd Automation"
+        git config user.email "fluxcd@Phoenix365.tech"
+        git add clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml
+        git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
+        git push
+      env:
+        GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no -i /home/ubuntu/actions-runner/ssh_key"
+
+    - name: Deploy on EKS
+      shell: bash
+      run: |
+        aws eks update-kubeconfig --name ${{ inputs.cluster }} --kubeconfig ${{ inputs.kubeconfig }}
+        export KUBECONFIG=${{ inputs.kubeconfig }}
+        kubectl rollout status deployment ${{ env.app_name }} -n ${{ inputs.env }} --timeout=120s
+        kubectl describe deployment ${{ env.app_name }} -n ${{ inputs.env }}
