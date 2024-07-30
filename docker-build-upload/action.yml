@@ -59,7 +59,7 @@ runs:
       id: set-output
       shell: bash
       run: |
-        echo "image_tag=${env.image_tag}" >> $GITHUB_ENV
-        echo "image_url=${env.image_url}" >> $GITHUB_OUTPUT
+        echo "image_tag=${{ env.image_tag }}" >> $GITHUB_ENV
+        echo "image_url=${{ env.image_url }}" >> $GITHUB_OUTPUT
 
 
