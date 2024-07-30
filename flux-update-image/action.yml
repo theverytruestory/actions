@@ -29,7 +29,7 @@ runs:
     - name: "Checkout flux"
       uses: actions/checkout@v4
       with:
-#        ssh-key: ${{ secrets.DEPLOY_KEY }}
+        ssh-key: ${{ secrets.DEPLOY_KEY }}
         repository: theverytruestory/flux
         path: flux
         sparse-checkout: ''
