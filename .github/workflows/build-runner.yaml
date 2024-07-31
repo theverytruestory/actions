@@ -31,9 +31,8 @@ env:
 
 jobs:
 
-  build:
+  prepare:
     runs-on: truestory-eks
-
     steps:
 
     - uses: actions/setup-python@v2
@@ -57,8 +56,6 @@ jobs:
       id: set-vars
       shell: bash
       run: |
-        image_tag=$(git rev-parse --short HEAD)
-        echo "image_tag=${image_tag}" >> $GITHUB_ENV
         ecr=648358337825.dkr.ecr.eu-north-1.amazonaws.com && echo "ecr=${ecr}" >> $GITHUB_ENV
         echo "image_url=${{ env.ecr }}/${{ env.repository }}:${{ env.tag }}" >> $GITHUB_ENV
         echo "ecr_password=$(aws ecr get-login-password)" >> $GITHUB_ENV
@@ -73,6 +70,13 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
+    - uses: actions/checkout@v4
+
+  build:
+    runs-on: truestory-eks
+    needs: prepare
+    steps:
+
     - name: Build and push ::notice::${{ env.image_url }}
       uses: docker/build-push-action@v6
       with:
@@ -84,5 +88,4 @@ jobs:
       id: set-output
       shell: bash
       run: |
-        echo "image_tag=${{ env.image_tag }}" >> $GITHUB_ENV
         echo "image_url=${{ env.image_url }}" >> $GITHUB_OUTPUT
