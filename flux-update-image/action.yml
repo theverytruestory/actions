@@ -21,36 +21,34 @@ inputs:
 runs:
   using: "composite"
   steps:
-
-    - name: "Clean flux dir"
+    - name: prepare
       shell: bash
-      run: rm -rf ./flux
+      run: |
+        ls -la 
+        ls -la /tmp/.ssh
+        echo "ID_RSA<<EOF"    >> $GITHUB_ENV
+        cat /tmp/.ssh/id_rsa  >> $GITHUB_ENV 
+        echo "EOF"            >> $GITHUB_ENV
+        rm -rf ./flux
 
-    - name: "Checkout flux"
+    - name: "flux git"
       uses: actions/checkout@v4
       with:
-        ssh-key: /tmp/.ssh/ssh-key
+        ssh-key: ID_RSA
         repository: theverytruestory/flux
         path: flux
         sparse-checkout: ''
+        ssh-strict: ''
 
     - name: Copy manifest to flux repo
       shell: bash
       run: |
-        GIT_PAGER=cat git diff --no-index fluxcd/clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml ${{ github.workspace }}/manifest.yaml -U0 --color=always || true
         cp ${{ github.workspace }}/manifest.yaml fluxcd/clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml
-
-    - name: Commit and push manifest to fluxcd repo
-      shell: bash
-      run: |
-        cd fluxcd
         git config user.name "Fluxcd Automation"
         git config user.email "fluxcd@Phoenix365.tech"
         git add clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml
         git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
         git push
-      env:
-        GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no -i /home/ubuntu/actions-runner/ssh_key"
 
     - name: Deploy on EKS
       shell: bash
