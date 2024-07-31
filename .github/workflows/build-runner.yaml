@@ -3,7 +3,7 @@ name: build custom runner
 on:
   push:
     paths:
-      - 'actiopns-runner-image/*'
+      - 'actions-runner-image/*'
       - '.github/workflows/build-runner.yaml'
   workflow_dispatch:
     inputs:
