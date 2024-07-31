@@ -1,4 +1,4 @@
-FROM summerwind/actions-runner:ubuntu-22.04
+FROM summerwind/actions-runner-dind:ubuntu-22.04
 
 ARG TARGETPLATFORM
 ENV DEBIAN_FRONTEND=noninteractive
