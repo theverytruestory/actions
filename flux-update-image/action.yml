@@ -10,6 +10,9 @@ inputs:
     description: "path to kubeconfig"
     required: false
     default: "~/.kube/kubeconfig"
+  manifest:
+    description: "path to manifest file"
+    required: true
   image_tag:
     description: "Image tag to deploy"
     required: true
@@ -30,15 +33,33 @@ runs:
         cat /tmp/.ssh/id_rsa  >> $GITHUB_ENV 
         echo "EOF"            >> $GITHUB_ENV
         rm -rf ./flux
+        if [ "${{ inputs.image_tag }}" != "" ]; then
+          echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_ENV
+        elif [ "${{ github.ref }}" == "refs/tags/" ]; then
+          echo "image_tag=${{ github.ref_name }}" >> $GITHUB_ENV
+        else
+          echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        fi
 
-    - name: "flux git"
-      uses: actions/checkout@v4
-      with:
-        ssh-key: ID_RSA
-        repository: theverytruestory/flux
-        path: flux
-        sparse-checkout: ''
-        ssh-strict: ''
+    - name: "Checkout flux"
+      shell: bash
+      run: |
+        GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
+        - git clone git@github.com:theverytruestory/flux.git flux && cd flux
+        - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${DRONE_COMMIT_SHA:0:8}/;}' ${{ inputs.cluster }}
+        - GIT_PAGER=cat git diff -U0 --color=always || true
+        - git add .
+        - git commit -a -m "github action commit"
+        - git push
+
+    #    - name: "flux git"
+#      uses: actions/checkout@v4
+#      with:
+#        ssh-key: ID_RSA
+#        repository: theverytruestory/flux
+#        path: flux
+#        sparse-checkout: ''
+#        ssh-strict: ''
 
     - name: Copy manifest to flux repo
       shell: bash
