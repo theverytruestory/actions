@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'actiopns-runner-image/*'
-      - '.github/build-runner.yaml'
+      - '.github/workflows/build-runner.yaml'
   workflow_dispatch:
     inputs:
       environment:
