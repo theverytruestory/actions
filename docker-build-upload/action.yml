@@ -24,16 +24,14 @@ runs:
       shell: bash
       run: |
         echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        ecr=648358337825.dkr.ecr.eu-north-1.amazonaws.com && echo "ecr=${ecr}" >> $GITHUB_ENV
-        echo "image_url=${ecr}/${{ github.event.repository.name }}:${image_tag}" >> $GITHUB_ENV
-        echo "ecr_password=$(aws ecr get-login-password)" >> $GITHUB_ENV
+        echo "image_url=648358337825.dkr.ecr.eu-north-1.amazonaws.com/${{ github.event.repository.name }}:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-    - name: Build image ${ env.image_url }
+    - name: Build image ${{ env.image_url }}
       shell: bash
       run: |
         aws ecr describe-repositories --repository-names ${{ github.event.repository.name }} --query "repositories[0].repositoryUri" || aws ecr create-repository --repository-name ${{ github.event.repository.name }}
         aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 648358337825.dkr.ecr.eu-north-1.amazonaws.com 
-        docker build -t ${ env.image_url } -f ${{ inputs.docker_file }} .
+        docker build -t ${{ env.image_url }} -f ${{ inputs.docker_file }} .
 
     - name: Push image
       shell: bash
