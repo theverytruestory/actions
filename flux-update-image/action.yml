@@ -21,7 +21,7 @@ runs:
         rm -rf ./flux
         git clone git@github.com:theverytruestory/flux.git flux
         cd flux
-        sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
+        sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ inputs.image_tag }}/;}' ${{ inputs.manifest }}
         git diff -U0 --color=always || true
         git config user.name "GitHub Automation"
         git config user.email "GitHubActions@thetruestory.news"
