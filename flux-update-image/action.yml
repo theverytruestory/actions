@@ -15,8 +15,7 @@ inputs:
     required: true
   image_tag:
     description: "Image tag to deploy"
-    required: true
-    default: latest
+    required: false
   token:
     description: "token to access private repos"
     required: false
@@ -41,16 +40,16 @@ runs:
           echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         fi
 
-    - name: "Checkout flux"
-      shell: bash
-      run: |
-        GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
-        - git clone git@github.com:theverytruestory/flux.git flux && cd flux
-        - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${DRONE_COMMIT_SHA:0:8}/;}' ${{ inputs.cluster }}
-        - GIT_PAGER=cat git diff -U0 --color=always || true
-        - git add .
-        - git commit -a -m "github action commit"
-        - git push
+#    - name: "Checkout flux"
+#      shell: bash
+#      run: |
+#        - GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
+#        - git clone git@github.com:theverytruestory/flux.git flux && cd flux
+#        - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
+#        - GIT_PAGER=cat git diff -U0 --color=always || true
+#        - git add .
+#        - git commit -a -m "github action commit"
+#        - git push
 
     #    - name: "flux git"
 #      uses: actions/checkout@v4
@@ -61,20 +60,23 @@ runs:
 #        sparse-checkout: ''
 #        ssh-strict: ''
 
-    - name: Copy manifest to flux repo
+    - name: flux
       shell: bash
       run: |
-        cp ${{ github.workspace }}/manifest.yaml fluxcd/clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml
-        git config user.name "Fluxcd Automation"
-        git config user.email "fluxcd@Phoenix365.tech"
-        git add clusters/${{ inputs.cluster }}/${{ inputs.env }}/${{ env.app_name }}.yaml
-        git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
-        git push
+        - GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
+        - git clone git@github.com:theverytruestory/flux.git flux && cd flux
+        - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
+        - GIT_PAGER=cat git diff -U0 --color=always || true
+        - git config user.name "GitHub Automation"
+        - git config user.email "GitHubActions@thetruestory.news"
+        - git add ${{ inputs.manifest }}
+        - git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
+        - git push
 
-    - name: Deploy on EKS
-      shell: bash
-      run: |
-        aws eks update-kubeconfig --name ${{ inputs.cluster }} --kubeconfig ${{ inputs.kubeconfig }}
-        export KUBECONFIG=${{ inputs.kubeconfig }}
-        kubectl rollout status deployment ${{ env.app_name }} -n ${{ inputs.env }} --timeout=120s
-        kubectl describe deployment ${{ env.app_name }} -n ${{ inputs.env }}
+#    - name: Deploy on EKS
+#      shell: bash
+#      run: |
+#        aws eks update-kubeconfig --name ${{ inputs.cluster }} --kubeconfig ${{ inputs.kubeconfig }}
+#        export KUBECONFIG=${{ inputs.kubeconfig }}
+#        kubectl rollout status deployment ${{ env.app_name }} -n ${{ inputs.env }} --timeout=120s
+#        kubectl describe deployment ${{ env.app_name }} -n ${{ inputs.env }}
