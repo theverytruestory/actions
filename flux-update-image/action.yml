@@ -9,12 +9,18 @@ inputs:
     description: "Image tag to deploy"
     required: true
 
+outputs:
+  describe:
+    description: "kubectl describe"
+    value: ${{ steps.set-output.outputs.KUBECTL_DESCRIBE }}
+
 runs:
   using: "composite"
   steps:
 
     - name: checkout flux repo and set image tag '${{ inputs.image_tag }}' to manifest '${{ inputs.manifest }}'
       shell: bash
+      id: flux
       env:
         GIT_SSH_COMMAND: 'ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
         GIT_PAGER: 'cat'
@@ -35,3 +41,13 @@ runs:
         kubectl -n flux-system wait kustomization/flux-system --for=condition=ready --timeout=2m
         kubectl rollout status  -f ${MANIFEST}
         kubectl describe -f ${MANIFEST}
+
+    - name: Set outputs
+      id: set-output
+      shell: bash
+      run: |
+        echo "KUBECTL_DESCRIBE<<EOF" >> $GITHUB_OUTPUT
+        kubectl describe -f ${MANIFEST} >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+
