@@ -34,8 +34,8 @@ runs:
         git config user.name "GitHub Automation"
         git config user.email "GitHubActions@thetruestory.news"
         git add ${{ inputs.manifest }}
-        git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
-        git push
+        git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})" || true
+        git push || true
         sleep 3
         CLUSTER=${MANIFEST:%%/*}
         aws eks update-kubeconfig --name $CLUSTER --region eu-north-1
