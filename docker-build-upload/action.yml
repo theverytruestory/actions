@@ -6,6 +6,7 @@ inputs:
     description: "Path to dockerfile"
     required: false
     default: "./Dockerfile"
+
 outputs:
   image_url:
     description: "Image url"
@@ -22,16 +23,16 @@ runs:
       id: set-vars
       shell: bash
       run: |
-        image_tag=$(git rev-parse --short HEAD)
-        echo "image_tag=${image_tag}" >> $GITHUB_ENV
+        if [ "${{ inputs.image_tag }}" != "" ]; then
+          echo "image_tag=${{ inputs.image_tag }}" >> $GITHUB_ENV
+        elif [ "${{ github.ref }}" == "refs/tags/" ]; then
+          echo "image_tag=${{ github.ref_name }}" >> $GITHUB_ENV
+        else
+          echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        fi
         ecr=648358337825.dkr.ecr.eu-north-1.amazonaws.com && echo "ecr=${ecr}" >> $GITHUB_ENV
         echo "image_url=${ecr}/${{ github.event.repository.name }}:${image_tag}" >> $GITHUB_ENV
         echo "ecr_password=$(aws ecr get-login-password)" >> $GITHUB_ENV
-
-    - name: Get or create ECR repository
-      shell: bash
-      run: >
-        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }}
 
     - name: Build image
       shell: bash
