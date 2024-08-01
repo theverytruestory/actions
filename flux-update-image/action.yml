@@ -37,8 +37,9 @@ runs:
         git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})" || true
         git push || true
         sleep 3
+        echo MANIFEST=${MANIFEST}
+        echo part MANIFEST=${MANIFEST%%/*}
         aws eks update-kubeconfig --name ${MANIFEST%%/*} --region eu-north-1
-#        kubectl -n flux-system wait kustomization/flux-system --for=condition=ready --timeout=2m
         kubectl rollout status  -f ${MANIFEST}
         kubectl describe -f ${MANIFEST}
 
