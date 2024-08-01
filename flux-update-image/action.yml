@@ -6,18 +6,11 @@ inputs:
     description: "cluster to deploy"
     required: false
     default: "truestory"
-  kubeconfig:
-    description: "path to kubeconfig"
-    required: false
-    default: "~/.kube/kubeconfig"
   manifest:
     description: "path to manifest file"
     required: true
   image_tag:
     description: "Image tag to deploy"
-    required: false
-  token:
-    description: "token to access private repos"
     required: false
 
 runs:
