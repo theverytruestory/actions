@@ -23,9 +23,10 @@ runs:
 
     - name: set image tag ${{ inputs.image_tag }} to ${{ inputs.manifest }}
       shell: bash
+      env:
+        GIT_SSH_COMMAND: 'ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+        GIT_PAGER: 'cat'
       run: |
-        export GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
-        export GIT_PAGER='cat'
         cd flux
         sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ inputs.image_tag }}/;}' ${{ inputs.manifest }}
         git diff -U0 --color=always || true
