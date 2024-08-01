@@ -36,13 +36,13 @@ runs:
     - name: Build image
       shell: bash
       run: |
+        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }} --query "repositories[0].repositoryUri" || aws ecr create-repository --repository-name ${{ github.event.repository.name }}
+        aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 648358337825.dkr.ecr.eu-north-1.amazonaws.com 
         docker build -t ${{ env.image_url }} -f ${{ inputs.docker_file }} .
 
     - name: Push image
       shell: bash
       run: |
-        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }} --query "repositories[0].repositoryUri" || aws ecr create-repository --repository-name ${{ github.event.repository.name }}
-        aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 648358337825.dkr.ecr.eu-north-1.amazonaws.com  
         docker push ${{ env.image_url }}
 
     - name: Set outputs
