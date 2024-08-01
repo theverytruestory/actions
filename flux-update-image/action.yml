@@ -38,7 +38,7 @@ runs:
         git push || true
         sleep 3
         aws eks update-kubeconfig --name ${MANIFEST%%/*} --region eu-north-1
-        kubectl -n flux-system wait kustomization/flux-system --for=condition=ready --timeout=2m
+#        kubectl -n flux-system wait kustomization/flux-system --for=condition=ready --timeout=2m
         kubectl rollout status  -f ${MANIFEST}
         kubectl describe -f ${MANIFEST}
 
