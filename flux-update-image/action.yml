@@ -16,7 +16,7 @@ runs:
     - name: flux
       shell: bash
       run: |
-        export GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
+        export GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
         export GIT_PAGER='cat'
         rm -rf ./flux
         git clone git@github.com:theverytruestory/flux.git flux
