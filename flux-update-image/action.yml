@@ -40,33 +40,15 @@ runs:
           echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         fi
 
-#    - name: "Checkout flux"
-#      shell: bash
-#      run: |
-#        - GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
-#        - git clone git@github.com:theverytruestory/flux.git flux && cd flux
-#        - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
-#        - GIT_PAGER=cat git diff -U0 --color=always || true
-#        - git add .
-#        - git commit -a -m "github action commit"
-#        - git push
-
-    #    - name: "flux git"
-#      uses: actions/checkout@v4
-#      with:
-#        ssh-key: ID_RSA
-#        repository: theverytruestory/flux
-#        path: flux
-#        sparse-checkout: ''
-#        ssh-strict: ''
-
     - name: flux
       shell: bash
+      with:
+         GIT_SSH_COMMAND: 'ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
+         GIT_PAGER: 'cat'
       run: |
-        - GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
         - git clone git@github.com:theverytruestory/flux.git flux && cd flux
         - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
-        - GIT_PAGER=cat git diff -U0 --color=always || true
+        - git diff -U0 --color=always || true
         - git config user.name "GitHub Automation"
         - git config user.email "GitHubActions@thetruestory.news"
         - git add ${{ inputs.manifest }}
