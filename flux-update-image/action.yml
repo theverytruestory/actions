@@ -43,16 +43,16 @@ runs:
     - name: flux
       shell: bash
       run: |
-        - export GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
-        - export GIT_PAGER='cat'
-        - git clone git@github.com:theverytruestory/flux.git flux && cd flux
-        - sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
-        - git diff -U0 --color=always || true
-        - git config user.name "GitHub Automation"
-        - git config user.email "GitHubActions@thetruestory.news"
-        - git add ${{ inputs.manifest }}
-        - git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
-        - git push
+        export GIT_SSH_COMMAND='ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes'
+        export GIT_PAGER='cat'
+        git clone git@github.com:theverytruestory/flux.git flux && cd flux
+        sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ env.image_tag }}/;}' ${{ inputs.manifest }}
+        git diff -U0 --color=always || true
+        git config user.name "GitHub Automation"
+        git config user.email "GitHubActions@thetruestory.news"
+        git add ${{ inputs.manifest }}
+        git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})"
+        git push
 
 #    - name: Deploy on EKS
 #      shell: bash
