@@ -41,7 +41,7 @@ runs:
         GIT_PAGER: 'cat'
         MANIFEST: ${{ inputs.manifest }}
       run: |
-        rm -rf ./flux
+        rm -rf flux
         git clone git@github.com:theverytruestory/flux.git flux
         cd flux
         sed -i '1,/image:.*/{s/\(image:[^:]*\):.*/\1:${{ inputs.image_tag }}/;}' ${{ inputs.manifest }}
@@ -55,6 +55,7 @@ runs:
     - name: check deployment and flux status
       shell: bash
       id: kubectl
+      working-directory: flux
       env:
         GIT_SSH_COMMAND: 'ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
         GIT_PAGER: 'cat'
@@ -68,6 +69,7 @@ runs:
 
     - name: Set outputs
       id: set-output
+      working-directory: flux
       shell: bash
       run: |
         echo "KUBECTL_DESCRIBE<<EOF" >> $GITHUB_OUTPUT
