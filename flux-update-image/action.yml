@@ -51,10 +51,20 @@ runs:
         git add ${{ inputs.manifest }}
         git commit -a -m "from ${{ github.event.repository.name }} at ${{ inputs.image_tag }} (${{ env.branch }})" || true
         git push || true
+
+    - name: check deployment and flux status
+      shell: bash
+      id: kubectl
+      env:
+        GIT_SSH_COMMAND: 'ssh -i /tmp/.ssh/id_rsa -o IdentitiesOnly=yes -o StrictHostKeyChecking=no'
+        GIT_PAGER: 'cat'
+        MANIFEST: ${{ inputs.manifest }}
+      run: |
         sleep 3
         kubectl -n flux-system wait kustomization/flux-system --for=condition=ready --timeout=2m
         kubectl rollout status  -f ${MANIFEST}
         kubectl describe -f ${MANIFEST}
+
 
     - name: Set outputs
       id: set-output
