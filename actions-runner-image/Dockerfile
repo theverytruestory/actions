@@ -17,6 +17,7 @@ RUN apt-get update -y \
     unzip \
     zip \
     openssh-client \
+    ansible \
     && rm -rf /var/lib/apt/lists/*
 
 
