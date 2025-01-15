@@ -4,10 +4,12 @@ description: "This action will update docker image id and deploy in on K8s"
 inputs:
   APP_NAME:
     description: "Application to deploy"
-    required: true
+    required: false
+    default: ${{ github.event.repository.name }}
   IMAGE_TAG:
     description: "Image tag to deploy"
-    required: true
+    required: false
+    default: ${{ env.image_tag }}
   GH_TOKEN:
     description: "GH_TOKEN"
     required: true
@@ -60,7 +62,7 @@ runs:
         git config user.email actions@tsof.news
         git config user.name Actions Bot
         git add .
-        git commit -m "Update image tag by Github Actions Job: ${{ github.run_number }} by @${{ github.actor }}"
+        git commit -m "Update image tag from ${{ github.repository }} # ${{ github.run_number }} by @${{ github.actor }}"
         git push origin main
       env:
         GIT_PASSWORD: ${{ inputs.GH_TOKEN }}
