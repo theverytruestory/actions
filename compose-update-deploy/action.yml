@@ -44,13 +44,9 @@ runs:
       working-directory: ${{ inputs.DEST_DIR }}
       shell: bash
       run: |
+        echo "changes=true" >> $GITHUB_OUTPUT # default value
         sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
         git diff -U0 --color=always --exit-code || (echo "changes=false" >> $GITHUB_OUTPUT; echo "### DIFF ELSE! :rocket:" >> $GITHUB_STEP_SUMMARY)
-        if [ $? -eq 0 ]; then
-          echo "changes=false" >> $GITHUB_OUTPUT
-        else
-          echo "changes=true" >> $GITHUB_OUTPUT
-        fi
       env:
         IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
         APP: ${{ inputs.APP_NAME }}
