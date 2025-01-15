@@ -39,21 +39,35 @@ runs:
           ${{ inputs.APP_NAME }}
         path: ${{ inputs.DEST_DIR }}
 
-    - name: modify the image
+    - name: set image tag
       id: set-tag
+      working-directory: ${{ inputs.DEST_DIR }}
+      shell: bash
+      run: |
+        sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
+        git diff -U0 --color=always --exit-code
+        if [ $? -eq 0 ]; then
+          echo "No changes to commit."
+          echo "::set-output name=changes::false"
+        else
+          echo "::set-output name=changes::true"
+        fi
+      env:
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        APP: ${{ inputs.APP_NAME }}
+
+    - name: update gitops repo
+      id: push-tag
+      if: steps.set-tag.outputs.changes == 'true'
       working-directory: ${{ inputs.DEST_DIR }}
       shell: bash
       run: |
         git config user.email actions@tsof.news
         git config user.name Actions Bot
-        sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
-        git diff -U0 --color=always
         git add $APP/docker-compose.yml
         git commit -m "Update image tag by Github Actions Job: ${{ github.run_number }} by @${{ github.actor }}"
         git push origin main
       env:
-        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
-        APP: ${{ inputs.APP_NAME }}
         GIT_PASSWORD: ${{ inputs.GH_TOKEN }}
 
     - name: Set outputs
