@@ -18,8 +18,9 @@ inputs:
 
 outputs:
   describe:
-    description: "kubectl describe"
-    value: ${{ steps.set-output.outputs.KUBECTL_DESCRIBE }}
+    description: "results"
+    value: ${{ steps.set-output.outputs.DESCRIBE_IT }}
+
 
 runs:
   using: "composite"
@@ -60,4 +61,4 @@ runs:
       working-directory: ${{ inputs.DEST_DIR }}
       shell: bash
       run: |
-        echo " who was at ${{ inputs.DEST_DIR }}?" >> $GITHUB_OUTPUT
+        echo "DESCRIBE_IT=\"des who was at ${{ inputs.DEST_DIR }}?\"" >> $GITHUB_OUTPUT
