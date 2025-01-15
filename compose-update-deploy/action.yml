@@ -45,7 +45,7 @@ runs:
       shell: bash
       run: |
         sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
-        git diff -U0 --color=always --exit-code
+        git diff -U0 --color=always --exit-code || (echo "changes=false" >> $GITHUB_OUTPUT; echo "### DIFF ELSE! :rocket:" >> $GITHUB_STEP_SUMMARY)
         if [ $? -eq 0 ]; then
           echo "changes=false" >> $GITHUB_OUTPUT
         else
