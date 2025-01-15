@@ -45,9 +45,7 @@ runs:
       shell: bash
       run: |
         sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
-        echo "CHANGES<<EOF" >> $GITHUB_ENV
-        git diff -U0 --color=always --exit-code >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
+        git diff -U0 --color=always --exit-code
         if [ $? -eq 0 ]; then
           echo "### No changes detected! :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "changes=false" >> $GITHUB_OUTPUT
@@ -77,6 +75,10 @@ runs:
       working-directory: ${{ inputs.DEST_DIR }}
       shell: bash
       run: |
-        echo "DESCRIBE_IT<<EOF" >> $GITHUB_OUTPUT
-        echo "${{ env.CHANGES }}" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        if [ ${{steps.set-tag.outputs.changes}} == 'true' ]; then
+          echo "DESCRIBE_IT<<EOF" >> $GITHUB_OUTPUT
+          git log -1 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "DESCRIBE_IT='nothing to change'" >> $GITHUB_OUTPUT
+        fi
