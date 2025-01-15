@@ -1,0 +1,63 @@
+name: "Update flux image and deploy on kube"
+description: "This action will update docker image id and deploy in on K8s"
+
+inputs:
+  APP_NAME:
+    description: "Application to deploy"
+    required: true
+  IMAGE_TAG:
+    description: "Image tag to deploy"
+    required: true
+  GH_TOKEN:
+    description: "GH_TOKEN"
+    required: true
+  DEST_DIR:
+    description: "Destination directory for gitops repo"
+    default: deployments_repo
+    required: false
+
+outputs:
+  describe:
+    description: "kubectl describe"
+    value: ${{ steps.set-output.outputs.KUBECTL_DESCRIBE }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: clean repo dest
+      id: clean
+      shell: bash
+      run: rm -rf ${{ inputs.DEST_DIR }}
+
+    - uses: actions/checkout@v4
+      id: checkout
+      with:
+        repository: theverytruestory/deployments
+        token: ${{ inputs.GH_TOKEN }}
+        sparse-checkout: |
+          ${{ inputs.APP_NAME }}
+        path: ${{ inputs.DEST_DIR }}
+
+    - name: modify the image
+      id: set-tag
+      working-directory: ${{ inputs.DEST_DIR }}
+      shell: bash
+      run: |
+        git config user.email actions@tsof.news
+        git config user.name Actions Bot
+        sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
+        git diff -U0 --color=always
+        git add $APP/docker-compose.yml
+        git commit -m "Update image tag by Github Actions Job: ${{ github.run_number }} by @${{ github.actor }}"
+        git push origin main
+      env:
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        APP: ${{ inputs.APP_NAME }}
+        GIT_PASSWORD: ${{ inputs.GH_TOKEN }}
+
+    - name: Set outputs
+      id: set-output
+      working-directory: ${{ inputs.DEST_DIR }}
+      shell: bash
+      run: |
+        echo " who was at ${{ inputs.DEST_DIR }}?" >> $GITHUB_OUTPUT
