@@ -45,17 +45,12 @@ runs:
       shell: bash
       run: |
         sed -i "s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" $APP/docker-compose.yml
-        git diff -U0 --color=always --exit-code
+        echo "CHANGES<<EOF" >> $GITHUB_ENV
+        git diff -U0 --color=always --exit-code >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
         if [ $? -eq 0 ]; then
-          echo "### No changes detected! :rocket:" $GITHUB_STEP_SUMMARY
+          echo "### No changes detected! :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "changes=false" >> $GITHUB_OUTPUT
-          echo "CHANGES<<EOF" >> $GITHUB_ENV
-          echo "sed was: s/\(image:[^:]*${APP}\):.*/\1:${IMAGE_TAG}/" >> $GITHUB_ENV
-          echo "grep image:.*${APP} is:" >> $GITHUB_ENV
-          grep "image:.*${APP}" $APP/docker-compose.yml >> $GITHUB_ENV
-          echo "just grep 'image:' is:" >> $GITHUB_ENV
-          grep "image:" $APP/docker-compose.yml >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
         else
           echo "changes=true" >> $GITHUB_OUTPUT
         fi
@@ -71,9 +66,6 @@ runs:
       run: |
         git config user.email actions@tsof.news
         git config user.name Actions Bot
-        echo "CHANGES<<EOF" >> $GITHUB_ENV
-        git diff -U0 --color=always --exit-code >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
         git add $APP/docker-compose.yml
         git commit -m "Update image tag by Github Actions Job: ${{ github.run_number }} by @${{ github.actor }}"
         git push origin main
