@@ -4,12 +4,10 @@ description: "This action will update docker image id and deploy in on K8s"
 inputs:
   APP_NAME:
     description: "Application to deploy"
-    required: false
-    default: ${{ github.event.repository.name }}
+    required: true
   IMAGE_TAG:
     description: "Image tag to deploy"
-    required: false
-    default: ${{ env.image_tag }}
+    required: true
   GH_TOKEN:
     description: "GH_TOKEN"
     required: true
