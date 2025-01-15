@@ -82,4 +82,6 @@ runs:
       working-directory: ${{ inputs.DEST_DIR }}
       shell: bash
       run: |
-        echo "DESCRIBE_IT=${{ env.CHANGES }}" >> $GITHUB_OUTPUT
+        echo "DESCRIBE_IT<<EOF" >> $GITHUB_OUTPUT
+        echo ${{ env.CHANGES }} >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
