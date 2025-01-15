@@ -59,7 +59,7 @@ runs:
       run: |
         git config user.email actions@tsof.news
         git config user.name Actions Bot
-        git add $APP/docker-compose.yml
+        git add .
         git commit -m "Update image tag by Github Actions Job: ${{ github.run_number }} by @${{ github.actor }}"
         git push origin main
       env:
