@@ -51,7 +51,7 @@ runs:
           echo "changes=false" >> $GITHUB_OUTPUT
           echo "CHANGES<<EOF" >> $GITHUB_ENV
           echo "in $APP/docker-compose.yml" >> $GITHUB_ENV
-          grep "image:" | grep "$APP" >> $GITHUB_ENV
+          grep "image:" $APP/docker-compose.yml | grep $APP >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
         else
           echo "changes=true" >> $GITHUB_OUTPUT
