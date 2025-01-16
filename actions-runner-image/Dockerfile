@@ -7,6 +7,7 @@ USER root
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
     && add-apt-repository -y ppa:git-core/ppa \
+    && add-apt-repository -y ppa:ansible/ansible \
     && apt-get update -y \
     && apt-get install -y --no-install-recommends \
     curl \
