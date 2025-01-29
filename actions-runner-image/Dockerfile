@@ -18,6 +18,7 @@ RUN apt-get update -y \
     unzip \
     zip \
     openssh-client \
+    python3-jmespath \
     ansible \
     && rm -rf /var/lib/apt/lists/*
 
