@@ -4,9 +4,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
 
-
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
     && add-apt-repository -y ppa:git-core/ppa \
