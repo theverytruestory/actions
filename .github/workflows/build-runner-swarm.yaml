@@ -21,8 +21,17 @@ jobs:
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
+    - name: Import Registry CA
+      run: echo "$ROOT_CA_PEM" > /tmp/root-ca.pem
+      env:
+        ROOT_CA_PEM: ${{ vars.ROOT_CA }}
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        buildkitd-config-inline: |
+          [registry."registry.htz.tsof.news:5000"]
+            ca=["/tmp/root-ca.pem"]
 
     - name: Build and push
       uses: docker/build-push-action@v6

@@ -2,6 +2,8 @@ FROM myoung34/github-runner:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
+RUN update-ca-certificates
 
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
