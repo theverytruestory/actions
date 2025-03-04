@@ -50,7 +50,7 @@ RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 RUN npm install -g npm@latest && \
-    npm install yarn && \
+    npm install -g yarn && \
     echo "npm version: $(npm -v)" && \
     echo "yarn version: $(yarn -v)"
 
