@@ -40,7 +40,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g yarn
+RUN npm install -g npm@latest && \
+    npm install -g yarn
 
 RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/download/v2.3.0/flux_2.3.0_linux_amd64.tar.gz  && \
     tar -C /tmp -xzf /tmp/flux.tar.gz &&  install -m 755 /tmp/flux /usr/local/bin &&  rm -f flux.tar.gz /tmp/flux
