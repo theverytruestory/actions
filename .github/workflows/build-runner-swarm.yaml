@@ -40,3 +40,5 @@ jobs:
         push: true
         file: actions-runner-swarm/Dockerfile
         tags:  ${{ env.REGISTRY }}/github-myoung34-tsof:latest
+        cache-from: type=registry,ref=github-myoung34-tsof:buildcache
+        cache-to: type=registry,ref=github-myoung34-tsof:buildcache,mode=max
