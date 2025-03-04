@@ -25,6 +25,10 @@ RUN apt-get update -y \
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o nodesource_setup.sh && \
     bash nodesource_setup.sh && \
     apt-get install -y nodejs && \
+    npm install -g npm@latest && \
+    npm install yarn && \
+    echo "npm version: $(npm -v)" && \
+    echo "yarn version: $(yarn -v)" && \
     rm -f nodesource_setup.sh
 
 RUN install -m 0755 -d /etc/apt/keyrings && \
