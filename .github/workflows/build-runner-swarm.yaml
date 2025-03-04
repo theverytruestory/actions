@@ -18,6 +18,13 @@ jobs:
 
     - uses: actions/checkout@v4
 
+    - name: set vars
+      id: set-vars
+      run: |
+        echo "TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "REPO_NAME="${{ env.REGISTRY }}/github-myoung34-tsof"" >> $GITHUB_ENV
+
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -39,6 +46,6 @@ jobs:
         context: actions-runner-swarm
         push: true
         file: actions-runner-swarm/Dockerfile
-        tags:  ${{ env.REGISTRY }}/github-myoung34-tsof:latest
-        cache-from: type=registry,ref=${{ env.REGISTRY }}/github-myoung34-tsof:buildcache
-        cache-to: type=registry,ref=${{ env.REGISTRY }}/github-myoung34-tsof:buildcache,mode=max
+        tags:  ${{ env.REPO_NAME }}:${{ env.TAG }}
+        cache-from: type=registry,ref=${{ env.REPO_NAME }}:buildcache
+        cache-to: type=registry,ref=${{ env.REPO_NAME }}:buildcache,mode=max
