@@ -22,10 +22,7 @@ RUN apt-get update -y \
     python3-jmespath \
     ansible
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x -o nodesource_setup.sh && \
-    bash nodesource_setup.sh && \
-    apt-get install -y nodejs && \
-    rm -f nodesource_setup.sh
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
@@ -40,17 +37,13 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     containerd.io \
     docker-buildx-plugin \
     docker-compose-plugin \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+RUN npm install -g yarn
 
 RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/download/v2.3.0/flux_2.3.0_linux_amd64.tar.gz  && \
     tar -C /tmp -xzf /tmp/flux.tar.gz &&  install -m 755 /tmp/flux /usr/local/bin &&  rm -f flux.tar.gz /tmp/flux
 
 RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-RUN npm install -g npm@latest && \
-    npm install -g yarn && \
-    echo "npm version: $(npm -v)" && \
-    echo "yarn version: $(yarn -v)"
-
