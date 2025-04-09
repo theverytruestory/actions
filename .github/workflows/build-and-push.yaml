@@ -1,0 +1,91 @@
+name: "Docker build and upload to registry"
+
+on:
+  workflow_call:
+
+    inputs:
+      docker_file:
+        description: "Path to dockerfile"
+        type: string
+        required: false
+        default: "./Dockerfile"
+      context:
+        description: "Docker context"
+        type: string
+        required: false
+        default: "."
+      registry:
+        description: "Docker registry"
+        type: string
+        required: false
+        default: "registry.htz.tsof.news:5000"
+
+    outputs:
+      image:
+        description: "The first output string"
+        value: ${{ jobs.build-and-push.outputs.image }}
+      tag:
+        description: "The second output string"
+        value: ${{ jobs.build-and-push.outputs.tag }}
+
+jobs:
+
+  build-and-push:
+    runs-on: swarm
+
+    outputs:
+      image: ${{ steps.set-output.outputs.image }}
+      tag: ${{ steps.set-output.outputs.tag }}
+
+    steps:
+
+      - name: Get branch name (merge)
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+
+      - name: Get branch name (pull request)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+
+      - name: set image name
+        id: set-vars
+        shell: bash
+        run: |
+          echo "TAG=${BRANCH%%-*}-$(git rev-parse --short HEAD)-$(date +%Y%m%dT%H%M)" >> $GITHUB_ENV
+          echo "IMAGE="${REGISTRY}/${{ github.event.repository.name }}"" >> $GITHUB_ENV
+        env:
+          BRANCH: ${{ env.BRANCH_NAME }}
+          REGISTRY: ${{ inputs.registry }}
+          TZ: CET
+
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-config-inline: |
+            [registry."registry.htz.tsof.news:5000"]
+              ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          file: ${{ inputs.docker_file }}
+          context: ${{ inputs.context }}
+          push: true
+          tags:  $ {{ env.IMAGE }}:${{ env.TAG }}
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+      - name: Set outputs
+        id: set-output
+        shell: bash
+        run: |
+          echo "image=${{ env.IMAGE }}" >> $GITHUB_OUTPUT
+          echo "tag=${{ env.TAG }}" >> $GITHUB_OUTPUT
+  
+  
