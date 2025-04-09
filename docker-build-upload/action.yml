@@ -1,44 +1,79 @@
-name: "Docker build and upload to ECR"
-description: "This will build docker image and upload it to ECR"
+name: "Docker build and upload to registry"
+description: "This will build docker image and upload it to registry"
 
 inputs:
   docker_file:
     description: "Path to dockerfile"
     required: false
     default: "./Dockerfile"
+  context:
+    description: "Docker context"
+    required: false
+    default: "."
+  registry:
+    description: "Docker registry"
+    required: false
+    default: "registry.htz.tsof.news:5000"
 
 outputs:
-  image_url:
+  image:
     description: "Image url"
-    value: ${{ steps.set-output.outputs.image_url }}
-  image_tag:
+    value: ${{ steps.set-output.outputs.image }}
+  tag:
     description: "Image tag"
-    value: ${{ steps.set-output.outputs.image_tag }}
+    value: ${{ steps.set-output.outputs.tag }}
 
 runs:
   using: "composite"
   steps:
 
-    - name: Get variables
+    - name: Get branch name (merge)
+      if: github.event_name != 'pull_request'
+      shell: bash
+      run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
+
+    - name: Get branch name (pull request)
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
+
+    - name: set image name
       id: set-vars
       shell: bash
       run: |
-        echo "image_tag=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        echo "image_url=648358337825.dkr.ecr.eu-north-1.amazonaws.com/${{ github.event.repository.name }}:$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "TAG=${BRANCH%%-*}-$(git rev-parse --short HEAD)-$(date +%Y%m%dT%H%M)" >> $GITHUB_ENV
+        echo "IMAGE="${REGISTRY}/${{ github.event.repository.name }}"" >> $GITHUB_ENV
+      env:
+        BRANCH: ${{ env.BRANCH_NAME }}
+        REGISTRY: ${{ inputs.registry }}
+        TZ: CET
 
-    - name: Build image ${{ env.image_url }}
-      shell: bash
-      run: |
-        aws ecr describe-repositories --repository-names ${{ github.event.repository.name }} --query "repositories[0].repositoryUri" || aws ecr create-repository --repository-name ${{ github.event.repository.name }}
-        aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 648358337825.dkr.ecr.eu-north-1.amazonaws.com 
-        docker build -t ${{ env.image_url }} -f ${{ inputs.docker_file }} .
-        docker push ${{ env.image_url }}
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        buildkitd-config-inline: |
+          [registry."registry.htz.tsof.news:5000"]
+            ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        file: ${{ inputs.docker_file }}
+        context: ${{ inputs.context }}
+        push: true
+        tags:  $ {{ env.IMAGE }}:${{ env.TAG }}
+        cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+        cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
 
     - name: Set outputs
       id: set-output
       shell: bash
       run: |
-        echo "image_tag=${{ env.image_tag }}" >> $GITHUB_OUTPUT
-        echo "image_url=${{ env.image_url }}" >> $GITHUB_OUTPUT
+        echo "image=${{ env.IMAGE }}" >> $GITHUB_OUTPUT
+        echo "tag=${{ env.TAG }}" >> $GITHUB_OUTPUT
 
 
