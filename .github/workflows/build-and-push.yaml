@@ -39,6 +39,15 @@ jobs:
 
     steps:
 
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: generate version file
+        run: |
+          fmt='tformat:{%n"git commit": "%H",%n"git hash": "%h",%n"git author": "%an %ae",%n"git date": "%ai",%n"git subject": "%s",%n"git branch": "%D"%n}'
+          (git log -1 --pretty="${fmt}" | tee  version.txt) || true
+
       - name: Get branch name (merge)
         if: github.event_name != 'pull_request'
         shell: bash
