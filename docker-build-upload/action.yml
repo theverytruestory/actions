@@ -65,7 +65,7 @@ runs:
         file: ${{ inputs.docker_file }}
         context: ${{ inputs.context }}
         push: true
-        tags:  $ {{ env.IMAGE }}:${{ env.TAG }}
+        tags:  ${{ env.IMAGE }}:${{ env.TAG }}
         cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
         cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
 
