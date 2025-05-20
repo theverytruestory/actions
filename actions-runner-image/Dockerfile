@@ -22,7 +22,7 @@ RUN apt-get update -y \
     python3-jmespath \
     ansible
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
