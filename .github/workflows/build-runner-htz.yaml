@@ -46,6 +46,6 @@ jobs:
         context: actions-runner-swarm
         push: true
         file: actions-runner-image/Dockerfile
-        tags:  ${{ env.REPO_NAME }}:${{ env.TAG }}
+        tags:  ${{ env.REPO_NAME }}:${{ env.TAG }},${{ env.REPO_NAME }}:latest
         cache-from: type=registry,ref=${{ env.REPO_NAME }}:buildcache
         cache-to: type=registry,ref=${{ env.REPO_NAME }}:buildcache,mode=max
