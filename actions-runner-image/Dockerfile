@@ -44,6 +44,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/download/v2.3.0/flux_2.3.0_linux_amd64.tar.gz  && \
     tar -C /tmp -xzf /tmp/flux.tar.gz &&  install -m 755 /tmp/flux /usr/local/bin &&  rm -f flux.tar.gz /tmp/flux
 
+RUN curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$(curl -L -s https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION)/argocd-linux-amd64  && \
+    install -m 555 argocd-linux-amd64 /usr/local/bin/argocd && rm argocd-linux-amd64
+
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
