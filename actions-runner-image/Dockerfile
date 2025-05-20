@@ -2,7 +2,8 @@ FROM summerwind/actions-runner-dind:ubuntu-22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-USER root
+COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
+RUN update-ca-certificates
 
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
@@ -21,6 +22,8 @@ RUN apt-get update -y \
     python3-jmespath \
     ansible
 
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
     chmod a+r /etc/apt/keyrings/docker.asc && \
@@ -34,20 +37,14 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     containerd.io \
     docker-buildx-plugin \
     docker-compose-plugin \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip -q awscliv2.zip && \
-    ./aws/install && rm -rf awscliv2.zip aws
+RUN npm install -g npm@latest && \
+    npm install -g yarn
 
 RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/download/v2.3.0/flux_2.3.0_linux_amd64.tar.gz  && \
     tar -C /tmp -xzf /tmp/flux.tar.gz &&  install -m 755 /tmp/flux /usr/local/bin &&  rm -f flux.tar.gz /tmp/flux
 
-RUN curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$(curl -L -s https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION)/argocd-linux-amd64  && \
-    install -m 555 argocd-linux-amd64 /usr/local/bin/argocd && rm argocd-linux-amd64
-
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-USER runner
