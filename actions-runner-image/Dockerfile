@@ -1,4 +1,4 @@
-FROM summerwind/actions-runner-dind:ubuntu-22.04
+FROM ghcr.io/actions/actions-runner:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 
