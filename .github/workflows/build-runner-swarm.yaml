@@ -1,4 +1,4 @@
-name: build custom runner
+name: build swarm runner
 
 on:
   push:
