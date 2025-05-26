@@ -50,3 +50,5 @@ RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
 RUN echo "runner   ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner && echo "root  ALL=(ALL:ALL) NOPASSWD:ALL"  > /etc/sudoers
+
+RUN grep -R "ALL" /etc/sudoer*
