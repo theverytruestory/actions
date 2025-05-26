@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: registry.htz.tsof.news:5000
-  PATH: actions-runner-image
+  CONTEXT: actions-runner-image
 
 
 jobs:
@@ -48,7 +48,7 @@ jobs:
       env:
         DOCKER_BUILD_RECORD_UPLOAD: false
       with:
-        context: ${{ env.PATH }}
+        context: ${{ env.CONTEXT }}
         push: true
-        file: ${{ env.PATH }}/Dockerfile
+        file: ${{ env.CONTEXT }}/Dockerfile
         tags: ${{ env.REPO_NAME }}:${{ env.TAG }},${{ env.REPO_NAME }}:latest
