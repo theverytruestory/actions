@@ -52,3 +52,5 @@ RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release
 RUN echo "runner   ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner && echo "root  ALL=(ALL:ALL) NOPASSWD:ALL"  > /etc/sudoers
 
 RUN grep -R "ALL" /etc/sudoer*
+
+USER runner
