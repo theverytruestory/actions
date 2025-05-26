@@ -24,7 +24,7 @@ jobs:
       id: set-vars
       run: |
         echo "TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-        echo "REPO_NAME="${{ env.REGISTRY }}/actions-runner-htz"" >> $GITHUB_ENV
+        echo "REPO="${{ env.REGISTRY }}/actions-runner-htz"" >> $GITHUB_ENV
         echo "DOCKER_BUILD_RECORD_UPLOAD=false"
 
 
@@ -51,4 +51,6 @@ jobs:
         context: ${{ env.CONTEXT }}
         push: true
         file: ${{ env.CONTEXT }}/Dockerfile
-        tags: ${{ env.REPO_NAME }}:${{ env.TAG }},${{ env.REPO_NAME }}:latest
+        tags: ${{ env.REPO }}:${{ env.TAG }},${{ env.REPO }}:latest
+        cache-from: type=registry,ref=${{ env.REPO }}:buildcache
+        cache-to: type=registry,ref=${{ env.REPO }}:buildcache,mode=max
