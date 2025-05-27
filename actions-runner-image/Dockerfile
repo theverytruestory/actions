@@ -34,15 +34,13 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 RUN npm install -g npm@latest && \
     npm install -g yarn
 #
-RUN curl -L -s -o kctlver https://dl.k8s.io/release/stable.txt \
-    curl -sSLO "https://dl.k8s.io/release/$(cat kctlver)/bin/linux/amd64/kubectl" && \
-    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
-    rm kubectl kctlver
+RUN curl -sSL -o kctlver https://dl.k8s.io/release/stable.txt && \
+    curl -sSL -o kubectl "https://dl.k8s.io/release/$(cat kctlver)/bin/linux/amd64/kubectl" && \
+    install  -m 555 kubectl /usr/local/bin/kubectl && rm kubectl kctlver
 
-RUN curl -L -s -o argover https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION \
-    curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$(cat argover)/argocd-linux-amd64 \
-    sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd \
-    rm argocd-linux-amd64 argover
+RUN curl -sSL -o argover https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION && \
+    curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$(cat argover)/argocd-linux-amd64 && \
+    install -m 555 argocd-linux-amd64 /usr/local/bin/argocd && rm argocd-linux-amd64 argover
 
 USER runner
 
