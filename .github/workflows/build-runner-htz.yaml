@@ -28,7 +28,7 @@ jobs:
 
     - name: create version.json
       shell: bash
-      run: git log -1 --pretty="${fmt}" | tee  version.json
+      run: git log -1 --pretty="${fmt}" | tee ${{ env.CONTEXT }}/version.json
       env:
         fmt: 'tformat:{%n"git commit": "%H",%n"git hash": "%h",%n"git author": "%an %ae",%n"git date": "%ai",%n"git subject": "%s",%n"git branch": "%D"%n}'
 
