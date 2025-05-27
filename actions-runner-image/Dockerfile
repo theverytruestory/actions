@@ -3,7 +3,7 @@ FROM ghcr.io/actions/actions-runner:latest
 ENV DEBIAN_FRONTEND=noninteractive
 USER root
 COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
-RUN update-ca-certificates
+COPY  version.json /tmp/version.json
 
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
@@ -21,6 +21,8 @@ RUN apt-get update -y \
     openssh-client \
     python3-jmespath \
     ansible
+
+RUN update-ca-certificates
 
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
@@ -49,8 +51,4 @@ RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/downl
 RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-RUN echo "runner   ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/runner && echo "root  ALL=(ALL:ALL) NOPASSWD:ALL"  > /etc/sudoers
-
-RUN grep -R "ALL" /etc/sudoer*
-
-USER runner
+RUN echo "runner ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/runner

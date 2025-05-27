@@ -25,7 +25,12 @@ jobs:
       run: |
         echo "TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
         echo "REPO="${{ env.REGISTRY }}/actions-runner-htz"" >> $GITHUB_ENV
-        echo "DOCKER_BUILD_RECORD_UPLOAD=false"
+
+    - name: create version.json
+      shell: bash
+      run: git log -1 --pretty="${fmt}" | tee  version.json
+      env:
+        fmt: 'tformat:{%n"git commit": "%H",%n"git hash": "%h",%n"git author": "%an %ae",%n"git date": "%ai",%n"git subject": "%s",%n"git branch": "%D"%n}'
 
 
     - name: Set up QEMU
