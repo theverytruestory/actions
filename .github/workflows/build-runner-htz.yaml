@@ -37,7 +37,7 @@ jobs:
       uses: docker/setup-qemu-action@v3
 
     - name: Import Registry CA
-      run: echo "$ROOT_CA_PEM" > /tmp/root-ca.pem
+      run: echo "$ROOT_CA_PEM" > ${{ env.CONTEXT }}/root-ca.pem
       env:
         ROOT_CA_PEM: ${{ vars.ROOT_CA }}
 
@@ -46,7 +46,7 @@ jobs:
       with:
         buildkitd-config-inline: |
           [registry."registry.htz.tsof.news:5000"]
-            ca=["/tmp/root-ca.pem"]
+            ca=["${{ env.CONTEXT }}/root-ca.pem"]
 
     - name: Build and push
       uses: docker/build-push-action@v6

@@ -3,7 +3,7 @@ FROM ghcr.io/actions/actions-runner:latest
 ENV DEBIAN_FRONTEND=noninteractive
 COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
 COPY version.json /tmp/version.json
-COPY /tmp/root-ca.pem /tmp/root-ca.pem
+COPY root-ca.pem /tmp/root-ca.pem
 
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
