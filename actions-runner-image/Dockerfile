@@ -2,26 +2,10 @@ FROM ghcr.io/actions/actions-runner:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
 USER root
+
 COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
 COPY version.json /tmp/version.json
-COPY root-ca.pem /tmp/root-ca.pem
 
-RUN apt-get update -y \
-    && apt-get install -y software-properties-common \
-    && add-apt-repository -y ppa:git-core/ppa \
-    && add-apt-repository -y ppa:ansible/ansible \
-    && apt-get update -y \
-    && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    git \
-    jq \
-    sudo \
-    unzip \
-    zip \
-    openssh-client \
-    python3-jmespath \
-    ansible
 
 RUN update-ca-certificates
 
@@ -35,6 +19,10 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
         $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" |  tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    zip \
+    openssh-client \
+    python3-jmespath \
+    ansible \
     docker-ce \
     docker-ce-cli \
     containerd.io \
@@ -45,12 +33,16 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 
 RUN npm install -g npm@latest && \
     npm install -g yarn
+#
+RUN curl -L -s -o kctlver https://dl.k8s.io/release/stable.txt \
+    curl -sSLO "https://dl.k8s.io/release/$(cat kctlver)/bin/linux/amd64/kubectl" && \
+    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
+    rm kubectl kctlver
 
-RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/download/v2.3.0/flux_2.3.0_linux_amd64.tar.gz  && \
-    tar -C /tmp -xzf /tmp/flux.tar.gz &&  install -m 755 /tmp/flux /usr/local/bin &&  rm -f flux.tar.gz /tmp/flux
-
-RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
-    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+RUN curl -L -s -o argover https://raw.githubusercontent.com/argoproj/argo-cd/stable/VERSION \
+    curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$(cat argover)/argocd-linux-amd64 \
+    sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd \
+    rm argocd-linux-amd64 argover
 
 USER runner
 
