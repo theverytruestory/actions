@@ -1,9 +1,9 @@
 FROM ghcr.io/actions/actions-runner:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
-USER root
 COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
 COPY version.json /tmp/version.json
+COPY /tmp/root-ca.pem /tmp/root-ca.pem
 
 RUN apt-get update -y \
     && apt-get install -y software-properties-common \
@@ -51,4 +51,7 @@ RUN curl -sSL -o /tmp/flux.tar.gz https://github.com/fluxcd/flux2/releases/downl
 RUN curl -sSLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
     install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
-RUN echo "runner ALL=(ALL:ALL) NOPASSWD: ALL" | tee /etc/sudoers.d/runner
+USER runner
+
+ENTRYPOINT ["/bin/bash", "-c"]
+CMD ["entrypoint.sh"]
