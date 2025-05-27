@@ -1,6 +1,7 @@
 FROM ghcr.io/actions/actions-runner:latest
 
 ENV DEBIAN_FRONTEND=noninteractive
+USER root
 COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
 COPY version.json /tmp/version.json
 COPY root-ca.pem /tmp/root-ca.pem
