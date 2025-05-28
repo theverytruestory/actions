@@ -42,6 +42,9 @@ RUN curl -sSL -o argover https://raw.githubusercontent.com/argoproj/argo-cd/stab
     curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/download/v$(cat argover)/argocd-linux-amd64 && \
     install -m 555 argocd-linux-amd64 /usr/local/bin/argocd && rm argocd-linux-amd64 argover
 
+RUN curl -sSL -o argocd-image-updater-linux https://github.com/argoproj-labs/argocd-image-updater/releases/download/v0.16.0/argocd-image-updater-linux_amd64 && \
+    install -m 555 argocd-image-updater-linux /usr/local/bin/argocd-image-updater && rm argocd-image-updater-linux
+
 USER runner
 
 ENTRYPOINT ["/bin/bash", "-c"]
