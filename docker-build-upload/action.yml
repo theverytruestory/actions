@@ -82,14 +82,4 @@ runs:
       run: |
         echo "REPO=$REPO" >> $GITHUB_OUTPUT
         echo "TAG=$TAG" >> $GITHUB_OUTPUT
-
-    - name: Set summary
-      shell: bash
-      run: |
-        echo "## Docker image built and pushed to registry" | tee -a $GITHUB_STEP_SUMMARY
-        echo "context: ${{ inputs.context }}" | tee -a $GITHUB_STEP_SUMMARY
-        echo "file: ${{ inputs.docker_file }}" | tee -a $GITHUB_STEP_SUMMARY
-        echo "tags: ${{ env.REPO }}:${{ env.TAG }}" | tee -a $GITHUB_STEP_SUMMARY
-        echo -ne '```\nimage: ${{ env.REPO }}:${{ env.TAG }}\n```' | tee -a $GITHUB_STEP_SUMMARY
-        
-        
+        echo -ne '```yaml\nrepo: ${{ env.REPO }}\ntag: ${{ env.TAG }}\n```' | tee -a $GITHUB_STEP_SUMMARY
