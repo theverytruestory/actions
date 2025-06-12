@@ -27,7 +27,8 @@ runs:
     - name: update image tag in manifest
       shell: bash
       run: |
-        for manifest in ${{ inputs.manifest }}; do
+        manifests=$(echo '${{ inputs.manifest }}' | sed ':a;N;$!ba;s/[\n\ \t]\+/ /g')
+        for manifest in manifests; do
           sed -i 's/\(image:.*${{ github.event.repository.name }}\):.*/\1:${{ inputs.tag }}/' ${manifest}
         done
         git diff -U0 --color=always || echo -e "git-diff exitcode $? \n${YEL}No changes in manifest${NC}"
