@@ -9,6 +9,11 @@ inputs:
     description: "Image tag to deploy"
     required: true
 
+outputs:
+  manifest:
+    description: "Path to manifest file(s)"
+    value: ${{ steps.update-manifest.outputs.manifests }}
+
 runs:
   using: "composite"
   steps:
@@ -25,26 +30,30 @@ runs:
 
 
     - name: update image tag in manifest
+      id: update-manifest
       shell: bash
       run: |
         manifests=$(echo '${{ inputs.manifest }}' | sed ':a;N;$!ba;s/[\n\ \t]\+/ /g')
+        echo "got $(echo ${manifests} | sed 's/\ /\n/g' | wc -l) manifests to update"
         for manifest in ${manifests}; do
           sed -i 's/\(image:.*${{ github.event.repository.name }}\):.*/\1:${{ inputs.tag }}/' ${manifest}
         done
-        git diff -U0 --color=always || echo -e "git-diff exitcode $? \n${YEL}No changes in manifest${NC}"
-#        for manifest in ${{ inputs.manifest }}; do
-#          git add ${manifest}
-#        done
-#        git commit -m "${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}" || echo -e "git-commit exitcode $? \n${YEL}No changes in manifest${NC}"
+        echo '##Manifest updated' | tee -a $GITHUB_STEP_SUMMARY
+        git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY || echo -e "git-diff exitcode $? \n${YEL}No changes in manifest${NC}"
+        for manifest in ${manifests}; do
+          git add ${manifest}
+        done
+        git commit -m "${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}" || echo -e "git-commit exitcode $? \n${YEL}No changes in manifest${NC}"
+        echo "manifests=${manifests}" >> $GITHUB_OUTPUT
       env:
         YEL: '\033[1;33m'
         NC: '\033[0m'
       working-directory: deployments/k0s/apps
 
-#    - uses: ad-m/github-push-action@master
-#      with:
-#        branch: main
-#        ssh: true
-#        directory: deployments
-#        repository: theverytruestory/deployments
-#
+    - uses: ad-m/github-push-action@master
+      with:
+        branch: main
+        ssh: true
+        directory: deployments
+        repository: theverytruestory/deployments
+
