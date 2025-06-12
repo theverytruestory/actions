@@ -21,7 +21,7 @@ inputs:
   repo:
     description: "Repository name, if not set it will be taken from github event"
     required: false
-    default: "${{inputs.registry}}/${{ github.event.repository.name }}"
+    default: ""
 
 
 outputs:
@@ -46,6 +46,11 @@ runs:
         else
           TAG="0.$(git rev-list --all --count)-${BRANCH#refs/heads/}-$(git rev-parse --short HEAD)"
         fi
+        if [ "${{ inputs.repo }}" != "" ]; then
+          REPO="${{ inputs.repo }}"
+        else
+          REPO="${REGISTRY}/${{ github.event.repository.name }}"
+        fi
         echo "TAG="${TAG}"" >> $GITHUB_ENV
         echo "REPO=${REGISTRY}/${{ github.event.repository.name }}" >> $GITHUB_ENV
 
@@ -64,14 +69,14 @@ runs:
         push: true
         context: ${{ inputs.context }}
         file: ${{ inputs.docker_file }}
-        tags: ${{ inputs.repo }}:${{ env.TAG }}
-        cache-from: type=registry,ref=${{ inputs.repo }}:buildcache
-        cache-to: type=registry,ref=${{ inputs.repo }}:buildcache,mode=max
+        tags: ${{ env.REPO }}:${{ env.TAG }}
+        cache-from: type=registry,ref=${{ env.REPO }}:buildcache
+        cache-to: type=registry,ref=${{ env.REPO }}:buildcache,mode=max
 
     - name: set outputs
       id: output
       env:
-        REPO: ${{ inputs.repo }}
+        REPO: ${{ env.REPO }}
         TAG: ${{ env.TAG }}
       shell: bash
       run: |
@@ -84,7 +89,7 @@ runs:
         echo "## Docker image built and pushed to registry" | tee -a $GITHUB_STEP_SUMMARY
         echo "context: ${{ inputs.context }}" | tee -a $GITHUB_STEP_SUMMARY
         echo "file: ${{ inputs.docker_file }}" | tee -a $GITHUB_STEP_SUMMARY
-        echo "tags: ${{ inputs.repo }}:${{ env.TAG }}" | tee -a $GITHUB_STEP_SUMMARY
+        echo "tags: ${{ env.REPO }}:${{ env.TAG }}" | tee -a $GITHUB_STEP_SUMMARY
         echo -ne '```\nimage: ${{ env.REPO }}:${{ env.TAG }}\n```' | tee -a $GITHUB_STEP_SUMMARY
         
         
