@@ -14,66 +14,77 @@ inputs:
     description: "Docker registry"
     required: false
     default: "registry.htz.tsof.news:5000"
+  tag:
+    description: "Image tag, if not set it will be generated from branch name and commit hash"
+    required: false
+    default: ""
+  repo:
+    description: "Repository name, if not set it will be taken from github event"
+    required: false
+    default: "${{inputs.registry}}/${{ github.event.repository.name }}"
+
 
 outputs:
-  image:
+  REPO:
     description: "Image url"
-    value: ${{ steps.set-output.outputs.image }}
-  tag:
+    value: ${{ steps.output.outputs.REPO }}
+  TAG:
     description: "Image tag"
-    value: ${{ steps.set-output.outputs.tag }}
+    value: ${{ steps.output.outputs.TAG }}
 
 runs:
   using: "composite"
   steps:
 
-    - name: Get branch name (merge)
-      if: github.event_name != 'pull_request'
+    - name: Set vars
       shell: bash
-      run: echo "BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)" >> $GITHUB_ENV
-
-    - name: Get branch name (pull request)
-      if: github.event_name == 'pull_request'
-      shell: bash
-      run: echo "BRANCH_NAME=$(echo ${GITHUB_HEAD_REF} | tr / -)" >> $GITHUB_ENV
-
-    - name: set image name
-      id: set-vars
-      shell: bash
-      run: |
-        echo "TAG=${BRANCH%%-*}-$(git rev-parse --short HEAD)-$(date +%Y%m%dT%H%M)" >> $GITHUB_ENV
-        echo "IMAGE="${REGISTRY}/${{ github.event.repository.name }}"" >> $GITHUB_ENV
       env:
-        BRANCH: ${{ env.BRANCH_NAME }}
-        REGISTRY: ${{ inputs.registry }}
-        TZ: CET
-
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+      run: |
+        if [ "${{ inputs.tag }}" != "" ]; then
+          TAG="${{ inputs.tag }}"
+        else
+          TAG="0.$(git rev-list --all --count)-${BRANCH#refs/heads/}-$(git rev-parse --short HEAD)"
+        fi
+        echo "TAG="${TAG}"" >> $GITHUB_ENV
+        echo "REPO=${REGISTRY}/${{ github.event.repository.name }}" >> $GITHUB_ENV
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       with:
         buildkitd-config-inline: |
-          [registry."registry.htz.tsof.news:5000"]
+          [registry."${{ inputs.registry }}"]
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
 
     - name: Build and push
       uses: docker/build-push-action@v6
+      env:
+        DOCKER_BUILD_RECORD_UPLOAD: false
       with:
-        file: ${{ inputs.docker_file }}
-        context: ${{ inputs.context }}
         push: true
-        tags:  ${{ env.IMAGE }}:${{ env.TAG }}
-        cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
-        cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+        context: ${{ inputs.context }}
+        file: ${{ inputs.docker_file }}
+        tags: ${{ inputs.repo }}:${{ env.TAG }}
+        cache-from: type=registry,ref=${{ inputs.repo }}:buildcache
+        cache-to: type=registry,ref=${{ inputs.repo }}:buildcache,mode=max
 
-    - name: Set outputs
-      id: set-output
+    - name: set outputs
+      id: output
+      env:
+        REPO: ${{ inputs.repo }}
+        TAG: ${{ env.TAG }}
       shell: bash
       run: |
-        echo "image=${{ env.IMAGE }}" >> $GITHUB_OUTPUT
-        echo "tag=${{ env.TAG }}" >> $GITHUB_OUTPUT
+        echo "REPO=$REPO" >> $GITHUB_OUTPUT
+        echo "TAG=$TAG" >> $GITHUB_OUTPUT
 
-
+    - name: Set summary
+      shell: bash
+      run: |
+        echo "## Docker image built and pushed to registry" | tee -a $GITHUB_STEP_SUMMARY
+        echo "context: ${{ inputs.context }}" | tee -a $GITHUB_STEP_SUMMARY
+        echo "file: ${{ inputs.docker_file }}" | tee -a $GITHUB_STEP_SUMMARY
+        echo "tags: ${{ inputs.repo }}:${{ env.TAG }}" | tee -a $GITHUB_STEP_SUMMARY
+        echo -ne '```\nimage: ${{ env.REPO }}:${{ env.TAG }}\n```' | tee -a $GITHUB_STEP_SUMMARY
+        
+        
