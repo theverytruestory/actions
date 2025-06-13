@@ -22,7 +22,10 @@ inputs:
     description: "Repository name, if not set it will be taken from github event"
     required: false
     default: ""
-
+  version_file:
+    description: "File with version information, if not set it will be created from git log, use '' empty string to disable"
+    required: false
+    default: "version.json"
 
 outputs:
   REPO:
@@ -60,6 +63,13 @@ runs:
         buildkitd-config-inline: |
           [registry."${{ inputs.registry }}"]
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+
+    - name: create ${{ inputs.version_file }}
+      if: ${{ inputs.version_file != '' }}
+      shell: bash
+      run: git log -1 --pretty="${fmt}" | tee  ${{ inputs.version_file }}
+      env:
+        fmt: 'tformat:{%n"git commit": "%H",%n"git hash": "%h",%n"git author": "%an %ae",%n"git date": "%ai",%n"git subject": "%s",%n"git branch": "%D"%n}'
 
     - name: Build and push
       uses: docker/build-push-action@v6
