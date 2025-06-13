@@ -38,7 +38,7 @@ runs:
         for manifest in ${manifests}; do
           sed -i 's/\(image:.*${{ github.event.repository.name }}\):.*/\1:${{ inputs.tag }}/' ${manifest}
         done
-        echo '##Manifest updated' | tee -a $GITHUB_STEP_SUMMARY
+        echo '## Manifest updated' | tee -a $GITHUB_STEP_SUMMARY
         echo '```' | tee -a $GITHUB_STEP_SUMMARY
         git diff -U0 --color=always && git diff -U0 --no-color >> $GITHUB_STEP_SUMMARY
         echo '```' | tee -a $GITHUB_STEP_SUMMARY
