@@ -40,7 +40,7 @@ runs:
         done
         echo '##Manifest updated' | tee -a $GITHUB_STEP_SUMMARY
         echo '```' | tee -a $GITHUB_STEP_SUMMARY
-        git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY || echo -e "git-diff exitcode $? \n${YEL}No changes in manifest${NC}"
+        git diff -U0 --color=always && git diff -U0 --no-color >> $GITHUB_STEP_SUMMARY
         echo '```' | tee -a $GITHUB_STEP_SUMMARY
         for manifest in ${manifests}; do
           git add ${manifest}
