@@ -43,19 +43,13 @@ runs:
       shell: bash
       env:
         BRANCH: ${{ github.head_ref || github.ref_name }}
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_TAG: ${{ inputs.tag }}
       run: |
-        if [ "${{ inputs.tag }}" != "" ]; then
-          TAG="${{ inputs.tag }}"
-        else
-          TAG="0.$(git rev-list --all --count)-${BRANCH#refs/heads/}-$(git rev-parse --short HEAD)"
-        fi
-        if [ "${{ inputs.repo }}" != "" ]; then
-          REPO="${{ inputs.repo }}"
-        else
-          REPO="${REGISTRY}/${{ github.event.repository.name }}"
-        fi
+        TAG=${INPUT_TAG:="0.$(git rev-list --all --count)-${BRANCH#refs/heads/}-$(git rev-parse --short HEAD)"}
+        REPO=${INPUT_REPO:="${{ inputs.registry }}/${{ github.event.repository.name }}"}
         echo "TAG="${TAG}"" >> $GITHUB_ENV
-        echo "REPO=${REGISTRY}/${{ github.event.repository.name }}" >> $GITHUB_ENV
+        echo "REPO="${REPO}"" >> $GITHUB_ENV
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
