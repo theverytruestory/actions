@@ -4,10 +4,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 USER root
 
 COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
-COPY version.json /tmp/version.json
-
-
 RUN update-ca-certificates
+
+COPY version.json /tmp/version.json
 
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
