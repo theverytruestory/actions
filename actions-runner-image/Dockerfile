@@ -21,6 +21,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     zip \
     openssh-client \
     python3-jmespath \
+    python3-pip \
     ansible \
     docker-ce \
     docker-ce-cli \
@@ -29,6 +30,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     docker-compose-plugin \
     nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install kubernetes
 
 RUN npm install -g npm@latest && \
     npm install -g yarn
