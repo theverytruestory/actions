@@ -15,7 +15,7 @@ env:
 jobs:
 
   prepare:
-    runs-on: [ htz-k0s-baserunner, htz-k0s ] 
+    runs-on: htz-k0s
     steps:
 
     - uses: actions/checkout@v4
