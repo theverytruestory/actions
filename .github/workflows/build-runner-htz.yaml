@@ -8,14 +8,14 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: registry.htz.tsof.news:5000
+  REGISTRY: registry.truestory.work
   CONTEXT: actions-runner-image
 
 
 jobs:
 
   prepare:
-    runs-on: htz-k0s
+    runs-on: standard
     steps:
 
     - uses: actions/checkout@v4
