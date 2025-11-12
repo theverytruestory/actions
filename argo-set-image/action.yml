@@ -1,0 +1,112 @@
+name: "ArgoCD set image and commit"
+description: "Test image via ArgoCD kustomize-image parameter, then commit to Git if stable"
+
+inputs:
+  registry:
+    description: "Docker registry"
+    required: false
+    default: "registry.truestory.work"
+  repo:
+    description: "Repository name (without registry), if not set will use github.event.repository.name"
+    required: false
+    default: ""
+  tag:
+    description: "Docker image tag (should be passed from docker-build-upload)"
+    required: true
+  argoapp:
+    description: "ArgoCD application name"
+    required: false
+    default: ""
+  image_name:
+    description: "Image name in kustomization.yaml (defaults to repo value)"
+    required: false
+    default: ""
+  timeout:
+    description: "Timeout for app stabilization (e.g., 5m, 300s)"
+    required: false
+    default: "2m"
+  git_user_name:
+    description: "Git user name for commit"
+    required: false
+    default: "github-actions[bot]"
+  git_user_email:
+    description: "Git user email for commit"
+    required: false
+    default: "github-actions[bot]@users.noreply.github.com"
+
+outputs:
+  status:
+    description: "Deployment status (success or failed)"
+    value: ${{ steps.result.outputs.status }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Set vars
+      shell: bash
+      run: |
+        REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"
+        IMAGE_FULL="${REPO_FULL}:${{ inputs.tag }}"
+        ARGOAPP: ${{ inputs.argoapp || github.event.repository.name }}
+        
+        echo "REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"" >> $GITHUB_ENV
+        echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
+        echo "ARGOAPP=${ARGOAPP}" >> $GITHUB_ENV
+
+    - name: Set ${{ env.IMAGE_FULL }} to ${{ inputs.argoapp }}
+      id: wait_for_app
+      shell: bash
+      run: |
+        argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health
+
+    - name: Get app status for summary
+      if: always()
+      shell: bash
+      run: |
+        argocd --core app get ${{ env.ARGOAPP }} > /tmp/argocd-status.txt || true
+
+        echo "## ArgoCD App Status: ${{ env.ARGOAPP }}" >> $GITHUB_STEP_SUMMARY
+        echo "\n**Image**: ${{ env.IMAGE_FULL }}\n" >> $GITHUB_STEP_SUMMARY
+        echo "```$(cat /tmp/argocd-status.txt)```\n" >> $GITHUB_STEP_SUMMARY
+
+    - name: Rollback on failure
+      if: failure()
+      shell: bash
+      run: argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+
+#
+    - uses: actions/checkout@v4
+      if: ${{ steps.wait_for_app.outputs.status == 'success' }}
+      with:
+        ref: refs/heads/main
+        show-progress: false
+        repository: theverytruestory/deployments
+        ssh-key: ~/.ssh/id_ed25519
+        sparse-checkout: k0s/apps
+        path: deployments
+        fetch-depth: 1
+
+    - name: Update kustomization.yaml
+      if: ${{ steps.wait_for_app.outputs.status == 'success' }}
+      working-directory: deployments/k0s/apps
+      shell: bash
+      env:
+        YEL: '\033[1;33m'
+        NC: '\033[0m'
+        KUSTOMIZATION_PATH: "${{ env.ARGOAPP }}/kustomization.yaml"
+      run: |
+        yq eval '(.images[] | select(.name == "{{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i $KUSTOMIZATION_PATH
+        git diff -U0 --color=always && echo "```\n$(git diff -U0 --no-color)\n```">> $GITHUB_STEP_SUMMARY
+        git add $KUSTOMIZATION_PATH
+        msg="${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}"
+        git commit -m $msg  || echo -e "git-commit exitcode $? \n${YEL}No changes in manifest${NC}"
+
+    - uses: ad-m/github-push-action@master
+      if: ${{ steps.wait_for_app.outputs.status == 'success' }}
+      with:
+        branch: main
+        ssh: true
+        directory: deployments
+        repository: theverytruestory/deployments
