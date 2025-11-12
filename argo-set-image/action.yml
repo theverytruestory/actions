@@ -22,9 +22,9 @@ inputs:
     required: false
     default: ""
   timeout:
-    description: "Timeout for app stabilization (e.g., 5m, 300s)"
+    description: "Timeout for app stabilization (e.g., 120)"
     required: false
-    default: "2m"
+    default: "120"
   git_user_name:
     description: "Git user name for commit"
     required: false
