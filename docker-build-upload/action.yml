@@ -45,13 +45,32 @@ runs:
         BRANCH: ${{ github.head_ref || github.ref_name }}
         INPUT_REPO: ${{ inputs.repo }}
         INPUT_TAG: ${{ inputs.tag }}
+        REF_TYPE: ${{ github.ref_type }}
       run: |
-        TAG=${INPUT_TAG:="0.$(git rev-list --all --count)-${BRANCH#refs/heads/}-$(git rev-parse --short HEAD)"}
-        REPO=${INPUT_REPO:="${{ inputs.registry }}/${{ github.event.repository.name }}"}
-        echo "TAG="${TAG}"" >> $GITHUB_ENV
-        echo "REPO="${REPO}"" >> $GITHUB_ENV
-        echo "github.head_ref: ${{ github.head_ref }}"
-        echo "github.ref_name: ${{ github.ref_name }}"
+        if [ -n "$INPUT_TAG" ]; then
+          TAG="$INPUT_TAG"
+        elif [ "$REF_TYPE" = "tag" ]; then
+          TAG_DATE=$(TZ=UTC git log -1 --format=%cd --date=format:'%Y-%m-%d' ${{ github.ref_name }})
+          TAG="${{ github.ref_name }}-${TAG_DATE}"
+        else
+          BRANCH_CLEAN=$(echo "${BRANCH#refs/heads/}" | sed 's/\//-/g')
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_DATE=$(TZ=UTC git log -1 --format=%cd --date=format:'%Y-%m-%d')
+          TAG="${BRANCH_CLEAN}-${SHORT_SHA}-${COMMIT_DATE}"
+        fi
+
+        if [ -n "$INPUT_REPO" ]; then
+          REPO_NAME="$INPUT_REPO"
+        else
+          REPO_NAME="${{ github.event.repository.name }}"
+        fi
+
+        REPO="${{ inputs.registry }}/${REPO_NAME}"
+
+        echo "TAG=${TAG}" >> $GITHUB_ENV
+        echo "REPO=${REPO}" >> $GITHUB_ENV
+        `echo "Generated TAG: ${TAG}"`
+        echo "Generated REPO: ${REPO}"
 
 
     - name: Set up Docker Buildx
