@@ -69,7 +69,7 @@ runs:
 
         echo "TAG=${TAG}" >> $GITHUB_ENV
         echo "REPO=${REPO}" >> $GITHUB_ENV
-        `echo "Generated TAG: ${TAG}"`
+        echo "Generated TAG: ${TAG}"
         echo "Generated REPO: ${REPO}"
 
 
