@@ -47,6 +47,9 @@ RUN curl -sSL -o argover https://raw.githubusercontent.com/argoproj/argo-cd/stab
 RUN curl -sSL -o argocd-image-updater-linux https://github.com/argoproj-labs/argocd-image-updater/releases/download/v0.16.0/argocd-image-updater-linux_amd64 && \
     install -m 555 argocd-image-updater-linux /usr/local/bin/argocd-image-updater && rm argocd-image-updater-linux
 
+RUN curl -sSL -o yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && \
+    install -m 555 yq /usr/local/bin/yq && rm yq
+
 USER runner
 
 ENTRYPOINT ["/bin/bash", "-c"]
