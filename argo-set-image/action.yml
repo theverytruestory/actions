@@ -52,6 +52,7 @@ runs:
         echo "REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"" >> $GITHUB_ENV
         echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
         echo "ARGOAPP=${ARGOAPP}" >> $GITHUB_ENV
+        echo "KUSTOMIZE="${{ env.ARGOAPP }}/kustomization.yaml"" >> $GITHUB_ENV
 
     - uses: actions/checkout@v4
       with:
@@ -63,32 +64,38 @@ runs:
         path: deployments
         fetch-depth: 1
 
-    - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
+    - name: ${{ env.ARGOAPP }} status before deploy
       working-directory: deployments/k0s/apps
-      env:
-        KUSTOMIZATION_PATH: "${{ env.ARGOAPP }}/kustomization.yaml"
       shell: bash
       run: |
         echo "### before" >> $GITHUB_STEP_SUMMARY
-        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health | tee -a $GITHUB_STEP_SUMMARY
-        argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
-        echo "### after" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        argocd --core app get ${{ env.ARGOAPP }} -o tree | tee -a $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+
+    - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
+      working-directory: deployments/k0s/apps
+      shell: bash
+      run: |
+        echo -e '### set image\n```' >> $GITHUB_STEP_SUMMARY
+        argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health | tee -a $GITHUB_STEP_SUMMARY
 
-        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i $KUSTOMIZATION_PATH
+
+
+    - name: git ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
+      working-directory: deployments/k0s/apps
+      shell: bash
+      run: |
+        
+        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i ${{ env.KUSTOMIZE }}
+
         echo '```' >> $GITHUB_STEP_SUMMARY
         git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
-
-    - name: commit ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} in git
-      working-directory: deployments/k0s/apps
-      env:
-        KUSTOMIZATION_PATH: "${{ env.ARGOAPP }}/kustomization.yaml"
-      shell: bash
-      run: |
-        git add $KUSTOMIZATION_PATH
-        
+        git add ${{ env.KUSTOMIZE }}        
         git config --global user.name "${{ inputs.git_user_name }}"
         git config --global user.email "${{ inputs.git_user_email }}"
 
@@ -100,11 +107,10 @@ runs:
       if: always()
       shell: bash
       run: |    
-        echo "## ArgoCD App Status: ${{ env.ARGOAPP }} with ${{ env.IMAGE_FULL }}" >> $GITHUB_STEP_SUMMARY
-        echo -e '```\n$(argocd --core app get ${{ env.ARGOAPP }})```\n' >> $GITHUB_STEP_SUMMARY
-        echo -e '```<details>
-        $(argocd --core app get ${{ env.ARGOAPP }})
-        ```</details>' >> $GITHUB_STEP_SUMMARY
+        echo "### ArgoCD App Status: ${{ env.ARGOAPP }} with ${{ env.IMAGE_FULL }}" >> $GITHUB_STEP_SUMMARY
+        echo '```<details>' >> $GITHUB_STEP_SUMMARY
+        argocd --core app get ${{ env.ARGOAPP }} -o tree | tee -a $GITHUB_STEP_SUMMARY
+        echo '```</details>' >> $GITHUB_STEP_SUMMARY
 
     - name: Rollback on failure
       if: failure()
