@@ -70,19 +70,19 @@ runs:
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        echo "### before" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo -e '<details><summary> before</summary>```' >> $GITHUB_STEP_SUMMARY
         argocd --core app get ${{ env.ARGOAPP }} -o tree | tee -a $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo '```</details>' >> $GITHUB_STEP_SUMMARY
 
 
     - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} and wait for healthy
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        echo -e '### set image\n```' >> $GITHUB_STEP_SUMMARY
+        echo -e '<details><summary>set and wait</summary>```' >> $GITHUB_STEP_SUMMARY
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
+        echo '```</details>' >> $GITHUB_STEP_SUMMARY
 
 
     - name: git ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
@@ -108,6 +108,9 @@ runs:
       if: failure()
       shell: bash
       run: |
+        echo '### failure! uset image' >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
         argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
 
