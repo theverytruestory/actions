@@ -76,9 +76,9 @@ runs:
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health | tee -a $GITHUB_STEP_SUMMARY
 
         yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i $KUSTOMIZATION_PATH
-        echo "```" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
         git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY
-        echo "```" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
 
 
     - name: commit ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} in git
@@ -101,7 +101,10 @@ runs:
       shell: bash
       run: |    
         echo "## ArgoCD App Status: ${{ env.ARGOAPP }} with ${{ env.IMAGE_FULL }}" >> $GITHUB_STEP_SUMMARY
-        echo "```\n$(argocd --core app get ${{ env.ARGOAPP }})```\n" >> $GITHUB_STEP_SUMMARY
+        echo -e '```\n$(argocd --core app get ${{ env.ARGOAPP }})```\n' >> $GITHUB_STEP_SUMMARY
+        echo -e '```<details>
+        $(argocd --core app get ${{ env.ARGOAPP }})
+        ```</details>' >> $GITHUB_STEP_SUMMARY
 
     - name: Rollback on failure
       if: failure()
