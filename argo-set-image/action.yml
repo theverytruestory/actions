@@ -63,7 +63,7 @@ runs:
         path: deployments
         fetch-depth: 1
 
-    - name: Set ${{ env.IMAGE_FULL }} to ${{ inputs.argoapp }}
+    - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
       working-directory: deployments/k0s/apps
       env:
         YEL: '\033[1;33m'
