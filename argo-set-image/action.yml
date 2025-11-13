@@ -96,13 +96,17 @@ runs:
         
         yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i ${{ env.KUSTOMIZE }}
 
+        curl -sSL https://github.com/dandavison/delta/releases/download/0.18.2/delta-0.18.2-x86_64-unknown-linux-gnu.tar.gz | sudo tar -xzf - --strip-components 1 -C /usr/local/bin delta-0.18.2-x86_64-unknown-linux-gnu/delta
+        git config --global user.name "${{ inputs.git_user_name }}"
+        git config --global user.email "${{ inputs.git_user_email }}"
+        git config --global core.pager delta              
+        git config --global delta.hunk-header-style none
+
         echo '```diff' >> $GITHUB_STEP_SUMMARY
         git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
         git add ${{ env.KUSTOMIZE }}        
-        git config --global user.name "${{ inputs.git_user_name }}"
-        git config --global user.email "${{ inputs.git_user_email }}"
 
         msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
         git commit -m "${msg}"  || echo -e "git-commit exitcode $? No changes in manifest"
