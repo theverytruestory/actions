@@ -74,8 +74,10 @@ runs:
         argocd --core app get ${{ env.ARGOAPP }} -o tree  > /tmp/before.txt
         echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy none 
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
         echo '```' >> $GITHUB_STEP_SUMMARY
         echo '</details>' >> $GITHUB_STEP_SUMMARY
 
@@ -107,6 +109,7 @@ runs:
         echo '### failure! uset image' >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
         echo "argo app befor deploy" > $GITHUB_STEP_SUMMARY
         cat /tmp/before.txt >> $GITHUB_STEP_SUMMARY/tmp/before.txt
