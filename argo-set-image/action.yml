@@ -69,15 +69,24 @@ runs:
         KUSTOMIZATION_PATH: "${{ env.ARGOAPP }}/kustomization.yaml"
       shell: bash
       run: |
+        echo "### before" >> $GITHUB_STEP_SUMMARY
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
-        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health || tee $GITHUB_STEP_SUMMARY
+        echo "### after" >> $GITHUB_STEP_SUMMARY
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health | tee -a $GITHUB_STEP_SUMMARY
+
         yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i $KUSTOMIZATION_PATH
-        git diff -U0 --color=always
-        
         echo "```" >> $GITHUB_STEP_SUMMARY
-        git diff -U0 --no-color >> $GITHUB_STEP_SUMMARY
+        git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY
         echo "```" >> $GITHUB_STEP_SUMMARY
-        
+
+
+    - name: commit ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} in git
+      working-directory: deployments/k0s/apps
+      env:
+        KUSTOMIZATION_PATH: "${{ env.ARGOAPP }}/kustomization.yaml"
+      shell: bash
+      run: |
         git add $KUSTOMIZATION_PATH
         
         git config --global user.name "${{ inputs.git_user_name }}"
