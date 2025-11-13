@@ -96,7 +96,7 @@ runs:
         
         yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i ${{ env.KUSTOMIZE }}
 
-        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo '```diff' >> $GITHUB_STEP_SUMMARY
         git diff -U0 --color=always | tee -a $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
