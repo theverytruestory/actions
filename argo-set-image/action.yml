@@ -76,14 +76,13 @@ runs:
         echo '```' >> $GITHUB_STEP_SUMMARY
 
 
-    - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
+    - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} and wait for healthy
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
         echo -e '### set image\n```' >> $GITHUB_STEP_SUMMARY
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
-        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health | tee -a $GITHUB_STEP_SUMMARY
-
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
 
 
     - name: git ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
@@ -105,16 +104,10 @@ runs:
         git commit -m "${msg}"  || echo -e "git-commit exitcode $? No changes in manifest"
         git push origin main
 
-    - name: Get app status for summary
-      if: always()
-      shell: bash
-      run: |    
-        echo "### ArgoCD App Status: ${{ env.ARGOAPP }} with ${{ env.IMAGE_FULL }}" >> $GITHUB_STEP_SUMMARY
-        echo '```<details>' >> $GITHUB_STEP_SUMMARY
-        argocd --core app get ${{ env.ARGOAPP }} -o tree | tee -a $GITHUB_STEP_SUMMARY
-        echo '```</details>' >> $GITHUB_STEP_SUMMARY
-
     - name: Rollback on failure
       if: failure()
       shell: bash
-      run: argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+      run: |
+        argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
+
