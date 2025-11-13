@@ -71,7 +71,7 @@ runs:
       run: |
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health || tee $GITHUB_STEP_SUMMARY
-        yq eval '(.images[] | select(.name == "{{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i $KUSTOMIZATION_PATH
+        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i $KUSTOMIZATION_PATH
         git diff -U0 --color=always
         
         echo "```" >> $GITHUB_STEP_SUMMARY
