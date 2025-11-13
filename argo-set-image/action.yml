@@ -32,7 +32,7 @@ inputs:
   git_user_email:
     description: "Git user email for commit"
     required: false
-    default: "github-actions[bot]@users.noreply.github.com"
+    default: "github-actions[bot]@truestory.work"
 
 outputs:
   status:
@@ -79,16 +79,13 @@ runs:
         echo "```" >> $GITHUB_STEP_SUMMARY
         
         git add $KUSTOMIZATION_PATH
-        msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
         
-        git commit -m "${msg}"  || echo -e "git-commit exitcode $? No changes in manifest"
+        git config --global user.name "${{ inputs.git_user_name }}"
+        git config --global user.email "${{ inputs.git_user_email }}"
 
-    - uses: ad-m/github-push-action@master
-      with:
-        branch: main
-        ssh: true
-        directory: deployments
-        repository: theverytruestory/deployments
+        msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
+        git commit -m "${msg}"  || echo -e "git-commit exitcode $? No changes in manifest"
+        git push origin main
 
     - name: Get app status for summary
       if: always()
