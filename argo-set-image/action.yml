@@ -90,10 +90,8 @@ runs:
       if: always()
       shell: bash
       run: |    
-        echo "## ArgoCD App Status: ${{ env.ARGOAPP }}" >> $GITHUB_STEP_SUMMARY
-        echo "\n**Image**: ${{ env.IMAGE_FULL }}\n" >> $GITHUB_STEP_SUMMARY
-        argocd --core app get ${{ env.ARGOAPP }} | tee  $GITHUB_STEP_SUMMARY
-        echo "```$(cat /tmp/argocd-status.txt)```\n" >> $GITHUB_STEP_SUMMARY
+        echo "## ArgoCD App Status: ${{ env.ARGOAPP }} with ${{ env.IMAGE_FULL }}" >> $GITHUB_STEP_SUMMARY
+        echo "```\n$(argocd --core app get ${{ env.ARGOAPP }})```\n" >> $GITHUB_STEP_SUMMARY
 
     - name: Rollback on failure
       if: failure()
