@@ -47,9 +47,9 @@ runs:
       shell: bash
       run: |
         REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"
-        IMAGE_FULL="${REPO_FULL}:${{ inputs.tag }}"
         ARGOAPP="${{ inputs.argoapp || github.event.repository.name }}"
-        KUSTOMIZE="${{ env.ARGOAPP }}/kustomization.yaml"
+        IMAGE_FULL="${REPO_FULL}:${{ inputs.tag }}"
+        KUSTOMIZE="${REPO_FULL}/kustomization.yaml"
         
         echo "REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"" >> $GITHUB_ENV
         echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
