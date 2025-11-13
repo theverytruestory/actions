@@ -73,11 +73,10 @@ runs:
       run: |
         echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        argocd --core app get ${{ env.ARGOAPP }} -o tree  | tee /tmp/before.txt
+        argocd --core app get ${{ env.ARGOAPP }} -o tree  > /tmp/before.txt
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        echo '</details>' >> $GITHUB_STEP_SUMMARY
 
 
     - name: git ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
@@ -89,7 +88,8 @@ runs:
 
         git config --global user.name "${{ inputs.git_user_name }}"
         git config --global user.email "${{ inputs.git_user_email }}"
-
+        
+        echo '</details>' >> $GITHUB_STEP_SUMMARY
         echo '```diff' >> $GITHUB_STEP_SUMMARY
         git diff -U0  | tee -a $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
