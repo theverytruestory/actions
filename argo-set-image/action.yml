@@ -91,7 +91,7 @@ runs:
         git config --global user.email "${{ inputs.git_user_email }}"
         
         echo '```diff' >> $GITHUB_STEP_SUMMARY
-        git diff -U0  | tee -a $GITHUB_STEP_SUMMARY
+        git diff -U0  || echo "no changes in git" | tee -a $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
         git add ${{ env.KUSTOMIZE }}        

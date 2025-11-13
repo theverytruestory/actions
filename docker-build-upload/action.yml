@@ -83,13 +83,7 @@ runs:
     - name: create ${{ inputs.version_file }}
       if: ${{ inputs.version_file != '' }}
       shell: bash
-      run: |
-        git log -1 --pretty="${fmt}" | tee  ${{ inputs.version_file }}
-        echo '<details><summary>${{ env.REPO }}:${{ env.TAG }}</summary>' >> $GITHUB_STEP_SUMMARY
-        echo '```json' >> $GITHUB_STEP_SUMMARY
-        jq '.' ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-
+      run: git log -1 --pretty="${fmt}" | tee  ${{ inputs.version_file }}
       env:
         fmt: 'tformat:{%n"git commit": "%H",%n"git hash": "%h",%n"git author": "%an %ae",%n"git date": "%ai",%n"git subject": "%s",%n"git branch": "%D"%n}'
 
@@ -115,5 +109,9 @@ runs:
       run: |
         echo "REPO=$REPO" >> $GITHUB_OUTPUT
         echo "TAG=$TAG" >> $GITHUB_OUTPUT
-        echo -ne '```yaml\nrepo: ${{ env.REPO }}\ntag: ${{ env.TAG }}\n```' | tee -a $GITHUB_STEP_SUMMARY
+        echo "image: ${{ env.REPO }}:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
+        echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
+        echo '```json' >> $GITHUB_STEP_SUMMARY
+        jq . ${{ inputs.version_file }} || cat ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
         echo '</details>' >> $GITHUB_STEP_SUMMARY
