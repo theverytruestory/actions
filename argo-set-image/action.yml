@@ -53,7 +53,7 @@ runs:
         
         echo "REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"" >> $GITHUB_ENV
         echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
-        echo "ARGOAPP=${ARGOAPP}" >> $GITHUB_ENV
+        echo "ARGOAPP=${ARGOAPP//_/-}" >> $GITHUB_ENV
         echo "KUSTOMIZE=${KUSTOMIZE}" >> $GITHUB_ENV
 
     - uses: actions/checkout@v4
