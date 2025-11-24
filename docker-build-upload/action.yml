@@ -26,6 +26,14 @@ inputs:
     description: "File with version information, if not set it will be created from git log, use '' empty string to disable"
     required: false
     default: "version.json"
+  builder_image:
+    description: "Builder image to use as base (for multi-stage builds). If image doesn't exist, it will be built automatically."
+    required: false
+    default: ""
+  builder_dockerfile:
+    description: "Path to builder dockerfile (used if builder needs to be built)"
+    required: false
+    default: "./Dockerfile.builder"
 
 outputs:
   REPO:
@@ -80,6 +88,34 @@ runs:
           [registry."${{ inputs.registry }}"]
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
 
+    - name: Check if builder image exists
+      if: ${{ inputs.builder_image != '' }}
+      id: check-builder
+      shell: bash
+      continue-on-error: true
+      run: |
+        if docker manifest inspect ${{ inputs.builder_image }} >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "Builder image exists: ${{ inputs.builder_image }}"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "Builder image does not exist: ${{ inputs.builder_image }}"
+        fi
+
+    - name: Build builder image
+      if: ${{ inputs.builder_image != '' && steps.check-builder.outputs.exists != 'true' }}
+      uses: docker/build-push-action@v6
+      env:
+        DOCKER_BUILD_RECORD_UPLOAD: false
+        DOCKER_BUILD_SUMMARY: false
+      with:
+        push: true
+        context: ${{ inputs.context }}
+        file: ${{ inputs.builder_dockerfile }}
+        tags: ${{ inputs.builder_image }}
+        cache-from: type=registry,ref=${{ env.REPO }}:builder-cache
+        cache-to: type=registry,ref=${{ env.REPO }}:builder-cache,mode=max
+
     - name: create ${{ inputs.version_file }}
       if: ${{ inputs.version_file != '' }}
       shell: bash
@@ -99,6 +135,8 @@ runs:
         tags: ${{ env.REPO }}:${{ env.TAG }}
         cache-from: type=registry,ref=${{ env.REPO }}:buildcache
         cache-to: type=registry,ref=${{ env.REPO }}:buildcache,mode=max
+        build-args: |
+          BUILDER_IMAGE=${{ inputs.builder_image }}
 
     - name: set outputs
       id: output
