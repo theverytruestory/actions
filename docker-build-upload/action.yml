@@ -173,8 +173,10 @@ runs:
         echo "REPO=$REPO" >> $GITHUB_OUTPUT
         echo "TAG=$TAG" >> $GITHUB_OUTPUT
         echo "image: ${{ env.REPO }}:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
-        echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
-        echo '```json' >> $GITHUB_STEP_SUMMARY
-        jq . ${{ inputs.version_file }} || cat ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo '</details>' >> $GITHUB_STEP_SUMMARY
+        if [ -f "${{ inputs.version_file }}" ]; then
+          echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          jq . ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY || cat ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '</details>' >> $GITHUB_STEP_SUMMARY
+        fi
