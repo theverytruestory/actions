@@ -1,0 +1,99 @@
+name: Build and Deploy Example
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout с токеном для коммита
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0  # Для git log
+
+      # 2. Настройка kubeconfig для ArgoCD
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      # 3. Установка необходимых инструментов
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o /usr/local/bin/argocd \
+            https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x /usr/local/bin/argocd
+          argocd version --client
+
+      - name: Install yq
+        run: |
+          wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+          yq --version
+
+      # 4. Сборка и загрузка Docker образа
+      - name: Build and push Docker image
+        id: docker
+        uses: theverytruestory/actions/docker-build-upload@main
+        with:
+          docker_file: ./Dockerfile
+          context: .
+          registry: registry.truestory.work
+          # repo и tag сгенерируются автоматически
+
+      # 5. Вывод информации о собранном образе
+      - name: Print image info
+        run: |
+          echo "Built image:"
+          echo "  REPO: ${{ steps.docker.outputs.REPO }}"
+          echo "  TAG: ${{ steps.docker.outputs.TAG }}"
+          echo "  FULL: ${{ steps.docker.outputs.REPO }}:${{ steps.docker.outputs.TAG }}"
+
+      # 6. Деплой в staging (всегда)
+      - name: Deploy to staging
+        id: deploy_staging
+        uses: theverytruestory/actions/argo-set-image@main
+        with:
+          repo: ${{ steps.docker.outputs.REPO }}
+          tag: ${{ steps.docker.outputs.TAG }}
+          argoapp: myapp-staging
+          kustomization_path: k0s/apps/myapp-staging/kustomization.yaml
+          timeout: 5m
+
+      # 7. Деплой в production (только для тегов)
+      - name: Deploy to production
+        if: github.ref_type == 'tag'
+        id: deploy_prod
+        uses: theverytruestory/actions/argo-set-image@main
+        with:
+          repo: ${{ steps.docker.outputs.REPO }}
+          tag: ${{ steps.docker.outputs.TAG }}
+          argoapp: myapp-prod
+          kustomization_path: k0s/apps/myapp-prod/kustomization.yaml
+          timeout: 10m  # Больше таймаут для прода
+
+      # 8. Уведомление об успехе
+      - name: Success notification
+        if: success()
+        run: |
+          echo "✅ Deployment successful!"
+          echo "Image: ${{ steps.docker.outputs.REPO }}:${{ steps.docker.outputs.TAG }}"
+          echo "Staging: ${{ steps.deploy_staging.outputs.status }}"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "Production: ${{ steps.deploy_prod.outputs.status }}"
+          fi
+
+      # 9. Уведомление об ошибке
+      - name: Failure notification
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Check the step summary for details"

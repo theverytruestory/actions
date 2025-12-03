@@ -42,7 +42,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-
     - name: Set vars
       shell: bash
       run: |
@@ -50,7 +49,7 @@ runs:
         ARGOAPP="${{ inputs.argoapp || github.event.repository.name }}"
         IMAGE_FULL="${REPO_FULL}:${{ inputs.tag }}"
         KUSTOMIZE="${ARGOAPP}/kustomization.yaml"
-        
+
         echo "REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"" >> $GITHUB_ENV
         echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
         echo "ARGOAPP=${ARGOAPP//_/-}" >> $GITHUB_ENV
@@ -66,7 +65,6 @@ runs:
         path: deployments
         fetch-depth: 1
 
-
     - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} and wait for healthy
       working-directory: deployments/k0s/apps
       shell: bash
@@ -74,33 +72,39 @@ runs:
         argocd --core app get ${{ env.ARGOAPP }} -o tree  > /tmp/before.txt
         echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy none 
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy none
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
         argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
         echo '```' >> $GITHUB_STEP_SUMMARY
         echo '</details>' >> $GITHUB_STEP_SUMMARY
 
-
     - name: git ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        
-        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i ${{ env.KUSTOMIZE }}
+        set -e
 
         git config --global user.name "${{ inputs.git_user_name }}"
         git config --global user.email "${{ inputs.git_user_email }}"
-        
+
+        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i ${{ env.KUSTOMIZE }}
+
         echo '```diff' >> $GITHUB_STEP_SUMMARY
-        git diff -U0  || echo "no changes in git" | tee -a $GITHUB_STEP_SUMMARY
+        git diff -U0 >> $GITHUB_STEP_SUMMARY || true
         echo '```' >> $GITHUB_STEP_SUMMARY
 
-        git add ${{ env.KUSTOMIZE }}        
+        git add ${{ env.KUSTOMIZE }}
 
-        msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
-        git commit -m "${msg}"  || echo -e "git-commit exitcode $? No changes in manifest"
-        git push origin main
+        if git diff --cached --quiet; then
+          echo "No changes to commit (tag already up to date)"
+          echo "**No changes to commit** - tag already matches" >> $GITHUB_STEP_SUMMARY
+        else
+          msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
+          git commit -m "${msg}"
+          git push origin main
+          echo "**Committed and pushed** manifest update" >> $GITHUB_STEP_SUMMARY
+        fi
 
     - name: Rollback on failure
       if: failure()
@@ -114,4 +118,3 @@ runs:
         echo "argo app befor deploy" > $GITHUB_STEP_SUMMARY
         cat /tmp/before.txt >> $GITHUB_STEP_SUMMARY/tmp/before.txt
         echo '```' >> $GITHUB_STEP_SUMMARY
-
