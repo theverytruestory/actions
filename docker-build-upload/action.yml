@@ -46,7 +46,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-
     - name: Set vars
       shell: bash
       env:
@@ -58,8 +57,14 @@ runs:
         if [ -n "$INPUT_TAG" ]; then
           TAG="$INPUT_TAG"
         elif [ "$REF_TYPE" = "tag" ]; then
-          TAG_DATE=$(TZ=UTC git log -1 --format=%cd --date=format:'%Y-%m-%d' ${{ github.ref_name }})
-          TAG="${{ github.ref_name }}-${TAG_DATE}"
+          # Git tag push: use tag name as-is (e.g., prod-v1.0, beta-v2.0)
+          TAG="${{ github.ref_name }}"
+          # Compute source image tag for retag
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          COMMIT_DATE=$(TZ=UTC git log -1 --format=%cd --date=format:'%Y-%m-%d')
+          SOURCE_TAG="main-${SHORT_SHA}-${COMMIT_DATE}"
+          echo "SOURCE_TAG=${SOURCE_TAG}" >> $GITHUB_ENV
+          echo "Source image for retag: ${SOURCE_TAG}"
         else
           BRANCH_CLEAN=$(echo "${BRANCH#refs/heads/}" | sed 's/\//-/g')
           SHORT_SHA=$(git rev-parse --short HEAD)
@@ -80,8 +85,27 @@ runs:
         echo "Generated TAG: ${TAG}"
         echo "Generated REPO: ${REPO}"
 
+    - name: Retag existing image (for git tags)
+      id: retag
+      if: github.ref_type == 'tag'
+      shell: bash
+      run: |
+        SOURCE="${{ env.REPO }}:${{ env.SOURCE_TAG }}"
+        TARGET="${{ env.REPO }}:${{ env.TAG }}"
+
+        if docker manifest inspect "${SOURCE}" >/dev/null 2>&1; then
+          echo "Found source image: ${SOURCE}"
+          docker buildx imagetools create --tag "${TARGET}" "${SOURCE}"
+          echo "Retagged ${SOURCE} -> ${TARGET}"
+          echo "skipped=true" >> $GITHUB_OUTPUT
+          echo "**Retagged existing image**: \`${SOURCE}\` -> \`${TARGET}\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Source image not found: ${SOURCE}, will build from scratch"
+          echo "skipped=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: Set up Docker Buildx
+      if: steps.retag.outputs.skipped != 'true'
       uses: docker/setup-buildx-action@v3
       with:
         buildkitd-config-inline: |
@@ -89,7 +113,7 @@ runs:
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
 
     - name: Check if builder image exists
-      if: ${{ inputs.builder_image != '' }}
+      if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != ''
       id: check-builder
       shell: bash
       continue-on-error: true
@@ -103,7 +127,7 @@ runs:
         fi
 
     - name: Build builder image
-      if: ${{ inputs.builder_image != '' && steps.check-builder.outputs.exists != 'true' }}
+      if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != '' && steps.check-builder.outputs.exists != 'true'
       uses: docker/build-push-action@v6
       env:
         DOCKER_BUILD_RECORD_UPLOAD: false
@@ -117,13 +141,14 @@ runs:
         cache-to: type=registry,ref=${{ env.REPO }}:builder-cache,mode=max
 
     - name: create ${{ inputs.version_file }}
-      if: ${{ inputs.version_file != '' }}
+      if: steps.retag.outputs.skipped != 'true' && inputs.version_file != ''
       shell: bash
       run: git log -1 --pretty="${fmt}" | tee  ${{ inputs.version_file }}
       env:
         fmt: 'tformat:{%n"git commit": "%H",%n"git hash": "%h",%n"git author": "%an %ae",%n"git date": "%ai",%n"git subject": "%s",%n"git branch": "%D"%n}'
 
     - name: Build and push
+      if: steps.retag.outputs.skipped != 'true'
       uses: docker/build-push-action@v6
       env:
         DOCKER_BUILD_RECORD_UPLOAD: false
