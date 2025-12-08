@@ -104,6 +104,23 @@ runs:
           echo "skipped=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Setup SSH agent
+      if: steps.retag.outputs.skipped != 'true'
+      id: ssh-agent
+      shell: bash
+      run: |
+        eval $(ssh-agent -s)
+        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+        if [ -f ~/.ssh/id_ed25519 ]; then
+          ssh-add ~/.ssh/id_ed25519
+          echo "Added ~/.ssh/id_ed25519"
+        elif [ -f ~/.ssh/id_rsa ]; then
+          ssh-add ~/.ssh/id_rsa
+          echo "Added ~/.ssh/id_rsa"
+        fi
+        ssh-add -l || true
+
     - name: Set up Docker Buildx
       if: steps.retag.outputs.skipped != 'true'
       uses: docker/setup-buildx-action@v3
@@ -111,6 +128,8 @@ runs:
         buildkitd-config-inline: |
           [registry."${{ inputs.registry }}"]
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+      env:
+        SSH_AUTH_SOCK: ${{ env.SSH_AUTH_SOCK }}
 
     - name: Check if builder image exists
       if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != ''
@@ -124,20 +143,6 @@ runs:
         else
           echo "exists=false" >> $GITHUB_OUTPUT
           echo "Builder image does not exist: ${{ inputs.builder_image }}"
-        fi
-
-    - name: Setup SSH agent for builder
-      if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != '' && steps.check-builder.outputs.exists != 'true'
-      id: ssh-agent
-      shell: bash
-      run: |
-        eval $(ssh-agent -s)
-        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
-        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-        if [ -f ~/.ssh/id_ed25519 ]; then
-          ssh-add ~/.ssh/id_ed25519
-        elif [ -f ~/.ssh/id_rsa ]; then
-          ssh-add ~/.ssh/id_rsa
         fi
 
     - name: Build builder image
