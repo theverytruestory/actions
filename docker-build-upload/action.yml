@@ -139,6 +139,7 @@ runs:
         tags: ${{ inputs.builder_image }}
         cache-from: type=registry,ref=${{ env.REPO }}:builder-cache
         cache-to: type=registry,ref=${{ env.REPO }}:builder-cache,mode=max
+        ssh: default
 
     - name: create ${{ inputs.version_file }}
       if: steps.retag.outputs.skipped != 'true' && inputs.version_file != ''
