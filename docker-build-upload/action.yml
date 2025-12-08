@@ -126,6 +126,20 @@ runs:
           echo "Builder image does not exist: ${{ inputs.builder_image }}"
         fi
 
+    - name: Setup SSH agent for builder
+      if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != '' && steps.check-builder.outputs.exists != 'true'
+      id: ssh-agent
+      shell: bash
+      run: |
+        eval $(ssh-agent -s)
+        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+        if [ -f ~/.ssh/id_ed25519 ]; then
+          ssh-add ~/.ssh/id_ed25519
+        elif [ -f ~/.ssh/id_rsa ]; then
+          ssh-add ~/.ssh/id_rsa
+        fi
+
     - name: Build builder image
       if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != '' && steps.check-builder.outputs.exists != 'true'
       uses: docker/build-push-action@v6
