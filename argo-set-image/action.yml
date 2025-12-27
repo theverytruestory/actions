@@ -42,20 +42,27 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Set vars
+    - name: Set variables
+      id: vars
       shell: bash
       run: |
         REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"
         ARGOAPP="${{ inputs.argoapp || github.event.repository.name }}"
+        ARGOAPP="${ARGOAPP//_/-}"
         IMAGE_FULL="${REPO_FULL}:${{ inputs.tag }}"
         KUSTOMIZE="${ARGOAPP}/kustomization.yaml"
 
-        echo "REPO_FULL="${{ inputs.registry }}/${{ inputs.repo || github.event.repository.name }}"" >> $GITHUB_ENV
+        echo "REPO_FULL=${REPO_FULL}" >> $GITHUB_ENV
         echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
-        echo "ARGOAPP=${ARGOAPP//_/-}" >> $GITHUB_ENV
+        echo "ARGOAPP=${ARGOAPP}" >> $GITHUB_ENV
         echo "KUSTOMIZE=${KUSTOMIZE}" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v4
+        echo "### Deploy \`${ARGOAPP}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** \`${IMAGE_FULL}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Checkout deployments
+      uses: actions/checkout@v4
       with:
         ref: refs/heads/main
         show-progress: false
@@ -65,21 +72,44 @@ runs:
         path: deployments
         fetch-depth: 1
 
-    - name: Set ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }} and wait for healthy
+    - name: Save current state
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        argocd --core app get ${{ env.ARGOAPP }} -o tree  > /tmp/before.txt
-        echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy none
-        argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"  | tee -a $GITHUB_STEP_SUMMARY
-        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo '</details>' >> $GITHUB_STEP_SUMMARY
+        echo "Fetching current app state..."
+        argocd --core app get ${{ env.ARGOAPP }} -o tree > /tmp/before.txt 2>&1 || true
 
-    - name: git ${{ env.IMAGE_FULL }} to ${{ env.ARGOAPP }}
+    - name: Set image ${{ env.IMAGE_FULL }}
+      working-directory: deployments/k0s/apps
+      shell: bash
+      run: |
+        echo "Disabling auto-sync..."
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy none
+
+        echo "Setting image to ${{ env.IMAGE_FULL }}..."
+        argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+
+    - name: Wait for healthy (timeout ${{ inputs.timeout }}s)
+      working-directory: deployments/k0s/apps
+      shell: bash
+      run: |
+        echo "Waiting for app to become healthy..."
+        echo "<details><summary>ArgoCD wait output</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }} --health -o tree 2>&1 | tee -a $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "</details>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+    - name: Re-enable auto-sync
+      working-directory: deployments/k0s/apps
+      shell: bash
+      run: |
+        echo "Re-enabling auto-sync..."
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
+
+    - name: Commit manifest update
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
@@ -88,33 +118,55 @@ runs:
         git config --global user.name "${{ inputs.git_user_name }}"
         git config --global user.email "${{ inputs.git_user_email }}"
 
-        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"'  -i ${{ env.KUSTOMIZE }}
+        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"' -i ${{ env.KUSTOMIZE }}
 
+        echo "<details><summary>Manifest diff</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         echo '```diff' >> $GITHUB_STEP_SUMMARY
         git diff -U0 >> $GITHUB_STEP_SUMMARY || true
         echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "</details>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
 
         git add ${{ env.KUSTOMIZE }}
 
         if git diff --cached --quiet; then
           echo "No changes to commit (tag already up to date)"
-          echo "**No changes to commit** - tag already matches" >> $GITHUB_STEP_SUMMARY
+          echo "**Result:** No changes - tag already matches" >> $GITHUB_STEP_SUMMARY
         else
           msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
           git commit -m "${msg}"
           git push origin main
-          echo "**Committed and pushed** manifest update" >> $GITHUB_STEP_SUMMARY
+          echo "**Result:** Committed and pushed manifest update" >> $GITHUB_STEP_SUMMARY
         fi
 
     - name: Rollback on failure
       if: failure()
+      working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        echo '### failure! uset image' >> $GITHUB_STEP_SUMMARY
+        echo ""
+        echo "### Deployment failed - rolling back" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "Unsetting image..."
+        argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}" 2>&1 || true
+
+        echo "Re-enabling auto-sync..."
+        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto 2>&1 || true
+
+        echo "Waiting for rollback..."
+        echo "<details><summary>Rollback output</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
-        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}  --health -o tree | tee -a $GITHUB_STEP_SUMMARY
-        echo "argo app befor deploy" > $GITHUB_STEP_SUMMARY
-        cat /tmp/before.txt >> $GITHUB_STEP_SUMMARY/tmp/before.txt
+        argocd --core app wait ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }} --health -o tree 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
         echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "</details>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        echo "<details><summary>State before deploy</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat /tmp/before.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No saved state" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "</details>" >> $GITHUB_STEP_SUMMARY
