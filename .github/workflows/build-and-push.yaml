@@ -79,6 +79,11 @@ jobs:
           buildkitd-config-inline: |
             [registry."registry.htz.tsof.news:5000"]
               ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+            [registry."registry.truestory.work"]
+              ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+              mirrors = ["registry.htz.tsof.news"]
+
+
 
       - name: Build and push
         uses: docker/build-push-action@v6

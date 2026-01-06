@@ -47,6 +47,7 @@ jobs:
         buildkitd-config-inline: |
           [registry."registry.truestory.work"]
             ca=["${{ env.CONTEXT }}/root-ca.pem"]
+            mirrors = ["registry.htz.tsof.news"]
 
     - name: Docker login
       run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
