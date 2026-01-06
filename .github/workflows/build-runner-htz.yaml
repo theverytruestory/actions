@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: registry.truestory.work
+  REGISTRY: registry.htz.tsof.news
   CONTEXT: actions-runner-image
 
 
