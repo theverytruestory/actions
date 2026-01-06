@@ -116,6 +116,9 @@ runs:
           [registry."registry.truestory.work"]
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
             mirrors = ["registry.htz.tsof.news"]
+          [registry."registry.htz.tsof.news"]
+            ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
+            mirrors = ["registry.truestory.work"]
 
 
     - name: Check if builder image exists
