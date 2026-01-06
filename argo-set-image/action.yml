@@ -5,7 +5,7 @@ inputs:
   registry:
     description: "Docker registry"
     required: false
-    default: "registry.truestory.work"
+    default: "registry.htz.tsof.news"
   repo:
     description: "Repository name (without registry), if not set will use github.event.repository.name"
     required: false

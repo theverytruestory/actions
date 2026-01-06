@@ -13,7 +13,7 @@ inputs:
   registry:
     description: "Docker registry"
     required: false
-    default: "registry.truestory.work"
+    default: "registry.htz.tsof.news"
   tag:
     description: "Image tag, if not set it will be generated from branch name and commit hash"
     required: false
