@@ -114,7 +114,6 @@ runs:
       with:
         buildkitd-config-inline: |
           [registry."registry.truestory.work"]
-            ca=["${{ env.CONTEXT }}/root-ca.pem"]
             ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
             mirrors = ["registry.htz.tsof.news"]
 
