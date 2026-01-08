@@ -118,7 +118,8 @@ runs:
             mirrors = ["registry.htz.tsof.news"]
           [registry."docker.io"]
             mirrors = ["registry.htz.tsof.news"]
-
+          [registry."registry.htz.tsof.news"]
+            chunk-size = 104857600
 
     - name: Check if builder image exists
       if: steps.retag.outputs.skipped != 'true' && inputs.builder_image != ''
@@ -184,8 +185,8 @@ runs:
         echo "image: ${{ env.REPO }}:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
         if [ -f "${{ inputs.version_file }}" ]; then
           echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
-          echo '```json' >> $GITHUB_STEP_SUMMARY
-          jq . ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY || cat ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
+          echo '```yaml' >> $GITHUB_STEP_SUMMARY
+          yq . --colors --input-format json ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo '</details>' >> $GITHUB_STEP_SUMMARY
         fi
