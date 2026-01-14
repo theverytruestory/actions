@@ -186,7 +186,7 @@ runs:
         if [ -f "${{ inputs.version_file }}" ]; then
           echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
           echo '```yaml' >> $GITHUB_STEP_SUMMARY
-          yq . --colors --input-format json ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
+          yq . --colors -oy --input-format json ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo '</details>' >> $GITHUB_STEP_SUMMARY
         fi
