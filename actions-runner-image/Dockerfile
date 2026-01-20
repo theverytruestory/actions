@@ -31,7 +31,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install kubernetes
+RUN python3 -m pip install --break-system-packages kubernetes
 
 RUN npm install -g npm@latest && \
     npm install -g yarn
