@@ -1,0 +1,87 @@
+name: "Build and Deploy"
+
+on:
+  workflow_call:
+    inputs:
+      docker_file:
+        type: string
+        default: "./Dockerfile"
+      context:
+        type: string
+        default: "."
+      version_file:
+        type: string
+        default: "version.json"
+      repo:
+        type: string
+        default: ""
+      builder_dockerfile:
+        type: string
+        default: "./Dockerfile.builder"
+      builder_requirements:
+        type: string
+        default: "requirements.txt"
+      builder_build_args:
+        type: string
+        default: ""
+      deploy:
+        type: boolean
+        default: true
+      argoapp:
+        type: string
+        default: ""
+      timeout:
+        type: string
+        default: "120"
+    outputs:
+      TAG:
+        value: ${{ jobs.build.outputs.TAG }}
+      REPO:
+        value: ${{ jobs.build.outputs.REPO }}
+
+jobs:
+
+  build:
+    runs-on: htz-k0s
+    name: "build ${{ github.head_ref || github.ref_name }}"
+    outputs:
+      TAG: ${{ steps.build-upload.outputs.TAG }}
+      REPO: ${{ steps.build-upload.outputs.REPO }}
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Generate builder tag
+        id: builder
+        uses: theverytruestory/actions/builder-tag@main
+        with:
+          dockerfile: ${{ inputs.builder_dockerfile }}
+          requirements: ${{ inputs.builder_requirements }}
+          repo: ${{ inputs.repo }}
+
+      - uses: theverytruestory/actions/docker-build-upload@main
+        id: build-upload
+        with:
+          docker_file: ${{ inputs.docker_file }}
+          context: ${{ inputs.context }}
+          version_file: ${{ inputs.version_file }}
+          repo: ${{ inputs.repo }}
+          builder_image: ${{ steps.builder.outputs.image }}
+          builder_dockerfile: ${{ inputs.builder_dockerfile }}
+          builder_build_args: ${{ inputs.builder_build_args }}
+
+  deploy:
+    if: inputs.deploy
+    runs-on: htz-k0s
+    needs: [build]
+    name: "deploy ${{ needs.build.outputs.TAG }}"
+
+    steps:
+
+      - uses: theverytruestory/actions/argo-set-image@main
+        with:
+          tag: ${{ needs.build.outputs.TAG }}
+          repo: ${{ inputs.repo }}
+          argoapp: ${{ inputs.argoapp }}
+          timeout: ${{ inputs.timeout }}
