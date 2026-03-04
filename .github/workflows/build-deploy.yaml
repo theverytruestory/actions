@@ -33,6 +33,9 @@ on:
       timeout:
         type: string
         default: "120"
+      test:
+        type: string
+        default: ""
     outputs:
       TAG:
         value: ${{ jobs.build.outputs.TAG }}
@@ -71,10 +74,19 @@ jobs:
           builder_dockerfile: ${{ inputs.builder_dockerfile }}
           builder_build_args: ${{ inputs.builder_build_args }}
 
+  test:
+    if: inputs.test != ''
+    needs: build
+    runs-on: htz-k0s
+    name: "test"
+    steps:
+      - uses: actions/checkout@v4
+      - run: chmod +x ${{ inputs.test }} && ./${{ inputs.test }}
+
   deploy:
     if: inputs.deploy
     runs-on: htz-k0s
-    needs: [build]
+    needs: [build, test]
     name: "deploy ${{ needs.build.outputs.TAG }}"
 
     steps:
