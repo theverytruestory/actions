@@ -75,13 +75,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          buildkitd-config-inline: |
-            [registry."registry.htz.tsof.news:5000"]
-              ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
-            [registry."registry.truestory.work"]
-              ca=["/usr/local/share/ca-certificates/ttf-root-ca.crt"]
-              mirrors = ["registry.htz.tsof.news"]
 
 
 
