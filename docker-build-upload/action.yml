@@ -163,6 +163,7 @@ runs:
         cache-to: type=registry,ref=${{ env.REPO }}:buildcache,mode=max
         build-args: |
           BUILDER_IMAGE=${{ inputs.builder_image }}
+          ${{ inputs.builder_build_args }}
 
     - name: set outputs
       id: output
