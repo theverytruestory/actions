@@ -36,6 +36,9 @@ on:
       test:
         type: string
         default: ""
+      runs-on:
+        type: string
+        default: "htz-k0s"
     outputs:
       TAG:
         value: ${{ jobs.build.outputs.TAG }}
@@ -45,7 +48,7 @@ on:
 jobs:
 
   build:
-    runs-on: htz-k0s
+    runs-on: ${{ inputs.runs-on }}
     name: "build ${{ github.head_ref || github.ref_name }}"
     outputs:
       TAG: ${{ steps.build-upload.outputs.TAG }}
@@ -77,7 +80,7 @@ jobs:
   test:
     if: inputs.test != ''
     needs: build
-    runs-on: htz-k0s
+    runs-on: ${{ inputs.runs-on }}
     name: "test"
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +88,7 @@ jobs:
 
   deploy:
     if: inputs.deploy
-    runs-on: htz-k0s
+    runs-on: ${{ inputs.runs-on }}
     needs: [build, test]
     name: "deploy ${{ needs.build.outputs.TAG }}"
 
