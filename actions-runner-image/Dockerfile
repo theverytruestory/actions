@@ -33,7 +33,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     postgresql-client-16 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --break-system-packages kubernetes GitPython
+#RUN python3 -m pip install --break-system-packages kubernetes GitPython
 
 RUN npm install -g npm@latest && \
     npm install -g yarn
