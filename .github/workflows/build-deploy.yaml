@@ -87,7 +87,9 @@ jobs:
       - run: chmod +x ${{ inputs.test }} && ./${{ inputs.test }}
 
   deploy:
-    if: inputs.deploy
+    # !cancelled() отменяет авто-skip, когда test пропущен (inputs.test == '');
+    # без status-функции пропуск test пропагируется на deploy.
+    if: ${{ !cancelled() && inputs.deploy && needs.build.result == 'success' }}
     runs-on: ${{ inputs.runs-on }}
     needs: [build, test]
     name: "deploy ${{ needs.build.outputs.TAG }}"
