@@ -112,6 +112,14 @@ runs:
     - name: Commit manifest update
       working-directory: deployments/k0s/apps
       shell: bash
+      env:
+        # Through env, not inline: Actions substitutes expressions before bash
+        # parses the script, so an apostrophe in a commit message broke the
+        # quoting outright and a crafted one would run on the runner.
+        HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        TRIGGER_ACTOR: ${{ github.actor }}
+        SOURCE_REPO: ${{ github.event.repository.name }}
+        SOURCE_RUN_NUMBER: ${{ github.run_number }}
       run: |
         set -e
 
@@ -134,7 +142,7 @@ runs:
           echo "No changes to commit (tag already up to date)"
           echo "**Result:** No changes - tag already matches" >> $GITHUB_STEP_SUMMARY
         else
-          msg='${{ github.actor }}@${{ github.event.repository.name }}#${{ github.run_number }}: ${{ github.event.head_commit.message }}'
+          msg="${TRIGGER_ACTOR}@${SOURCE_REPO}#${SOURCE_RUN_NUMBER}: ${HEAD_COMMIT_MESSAGE}"
           git commit -m "${msg}"
           git push origin main
           echo "**Result:** Committed and pushed manifest update" >> $GITHUB_STEP_SUMMARY
