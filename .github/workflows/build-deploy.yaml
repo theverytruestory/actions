@@ -30,6 +30,9 @@ on:
       argoapp:
         type: string
         default: ""
+      extra_tag_paths:
+        type: string
+        default: ""
       timeout:
         type: string
         default: "120"
@@ -102,3 +105,4 @@ jobs:
           repo: ${{ inputs.repo }}
           argoapp: ${{ inputs.argoapp }}
           timeout: ${{ inputs.timeout }}
+          extra_tag_paths: ${{ inputs.extra_tag_paths }}

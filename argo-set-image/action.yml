@@ -21,6 +21,15 @@ inputs:
     description: "Image name in kustomization.yaml (defaults to repo value)"
     required: false
     default: ""
+  extra_tag_paths:
+    description: |
+      Extra places carrying the same tag, one "<file>=<yq path>" per line, paths
+      relative to k0s/apps. For images a kustomization cannot reach — a tag
+      nested in an ArgoCD Application's Helm valuesObject, say. Each is written
+      with the same tag and read back; a path that matches nothing fails the
+      deploy rather than leaving the two versions to drift apart quietly.
+    required: false
+    default: ""
   timeout:
     description: "Timeout for app stabilization (e.g., 120)"
     required: false
@@ -137,6 +146,36 @@ runs:
         echo "" >> $GITHUB_STEP_SUMMARY
 
         git add ${{ env.KUSTOMIZE }}
+
+        # Те же теги в местах, до которых kustomization не дотягивается.
+        # Читаем обратно: yq на несуществующем пути молча создаст ветку или
+        # не сделает ничего, и версии разъедутся без единого сообщения.
+        while IFS= read -r entry; do
+          [ -z "${entry}" ] && continue
+          file="${entry%%=*}"
+          path="${entry#*=}"
+          if [ ! -f "${file}" ]; then
+            echo "extra_tag_paths: файла нет: ${file}" >&2
+            exit 1
+          fi
+          # Сначала убеждаемся, что путь существует. `yq = value` на
+          # несуществующем пути СОЗДАЁТ ветку, поэтому чтение после записи
+          # опечатку не ловит: оно вернёт только что придуманное значение,
+          # а в файл добавится секция, которую никто не читает.
+          before="$(yq eval "${path}" "${file}")"
+          if [ -z "${before}" ] || [ "${before}" = "null" ]; then
+            echo "extra_tag_paths: пути нет в ${file}: ${path}" >&2
+            exit 1
+          fi
+          yq eval "${path} = \"${{ inputs.tag }}\"" -i "${file}"
+          got="$(yq eval "${path}" "${file}")"
+          if [ "${got}" != "${{ inputs.tag }}" ]; then
+            echo "extra_tag_paths: ${file} ${path} = '${got}', ожидался '${{ inputs.tag }}'" >&2
+            exit 1
+          fi
+          echo "extra tag set: ${file} ${path}"
+          git add "${file}"
+        done <<< "${{ inputs.extra_tag_paths }}"
 
         if git diff --cached --quiet; then
           echo "No changes to commit (tag already up to date)"
