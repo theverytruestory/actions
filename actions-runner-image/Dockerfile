@@ -8,7 +8,7 @@ RUN update-ca-certificates
 
 COPY version.json /tmp/version.json
 
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 
 RUN install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
@@ -35,8 +35,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 
 #RUN python3 -m pip install --break-system-packages kubernetes GitPython
 
-RUN npm install -g npm@latest && \
-    npm install -g yarn
+RUN npm install -g yarn
 #
 RUN curl -sSL -o kctlver https://dl.k8s.io/release/stable.txt && \
     curl -sSL -o kubectl "https://dl.k8s.io/release/$(cat kctlver)/bin/linux/amd64/kubectl" && \

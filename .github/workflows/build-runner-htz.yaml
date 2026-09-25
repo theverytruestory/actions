@@ -6,6 +6,9 @@ on:
       - 'actions-runner-image/*'
       - '.github/workflows/build-runner-htz.yaml'
   workflow_dispatch:
+  # Self-hosted runners get deprecated ~30 days after a new release; keep :latest fresh.
+  schedule:
+    - cron: '0 4 * * 1'
 
 env:
   REGISTRY: registry.htz.tsof.news
