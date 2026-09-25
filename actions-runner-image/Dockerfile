@@ -3,9 +3,6 @@ FROM ghcr.io/actions/actions-runner:latest
 ENV DEBIAN_FRONTEND=noninteractive
 USER root
 
-COPY root-ca.pem /usr/local/share/ca-certificates/ttf-root-ca.crt
-RUN update-ca-certificates
-
 COPY version.json /tmp/version.json
 
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
