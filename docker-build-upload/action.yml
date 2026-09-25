@@ -176,7 +176,10 @@ runs:
         echo "TAG=$TAG" >> $GITHUB_OUTPUT
         echo "image: ${{ env.REPO }}:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
         if [ -f "${{ inputs.version_file }}" ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo '<details><summary>details</summary>' >> $GITHUB_STEP_SUMMARY
+          # Without this blank line GitHub renders the fence below as plain text.
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo '```yaml' >> $GITHUB_STEP_SUMMARY
           yq -p json -o yaml ${{ inputs.version_file }} >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
