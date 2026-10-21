@@ -98,6 +98,17 @@ runs:
         echo "Setting image to ${{ env.IMAGE_FULL }}..."
         argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
 
+    - name: Sync ${{ env.IMAGE_FULL }}
+      working-directory: deployments/k0s/apps
+      shell: bash
+      run: |
+        # Auto-sync is off: without this the health wait below sees the old pods
+        if ! argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}; then
+          # an auto-sync started before we disabled it: let it finish, then sync our image
+          argocd --core app wait ${{ env.ARGOAPP }} --operation --timeout ${{ inputs.timeout }}
+          argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}
+        fi
+
     - name: Wait for healthy (timeout ${{ inputs.timeout }}s)
       working-directory: deployments/k0s/apps
       shell: bash
@@ -198,6 +209,9 @@ runs:
 
         echo "Unsetting image..."
         argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}" 2>&1 || true
+
+        echo "Syncing back..."
+        argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }} 2>&1 || true
 
         echo "Re-enabling auto-sync..."
         argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto 2>&1 || true
