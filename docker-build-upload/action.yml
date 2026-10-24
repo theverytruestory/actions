@@ -38,6 +38,18 @@ inputs:
     description: "Build args for builder image (multiline, KEY=VALUE format)"
     required: false
     default: ""
+  build_args:
+    description: "Build args for the main image (multiline, KEY=VALUE format)"
+    required: false
+    default: ""
+  target:
+    description: "Dockerfile target stage"
+    required: false
+    default: ""
+  build_contexts:
+    description: "Additional build contexts (multiline, name=path)"
+    required: false
+    default: ""
 
 outputs:
   REPO:
@@ -159,11 +171,14 @@ runs:
         context: ${{ inputs.context }}
         file: ${{ inputs.docker_file }}
         tags: ${{ env.REPO }}:${{ env.TAG }}
+        target: ${{ inputs.target }}
+        build-contexts: ${{ inputs.build_contexts }}
         cache-from: type=registry,ref=${{ env.REPO }}:buildcache
         cache-to: type=registry,ref=${{ env.REPO }}:buildcache,mode=max
         build-args: |
           BUILDER_IMAGE=${{ inputs.builder_image }}
           ${{ inputs.builder_build_args }}
+          ${{ inputs.build_args }}
 
     - name: set outputs
       id: output
