@@ -30,6 +30,20 @@ inputs:
       deploy rather than leaving the two versions to drift apart quietly.
     required: false
     default: ""
+  helm_tag_path:
+    description: |
+      Helm mode: value path carrying the tag (e.g. hyperdx.image.tag). The image is
+      set with --helm-set and the tag written to <argoapp>/application.yaml valuesObject.
+    required: false
+    default: ""
+  source_position:
+    description: "Helm mode: 1-based position in spec.sources (empty for a single spec.source)"
+    required: false
+    default: ""
+  commit_message:
+    description: "Manifest commit message (default: the triggering push's head commit message)"
+    required: false
+    default: ""
   timeout:
     description: "Timeout for app stabilization (e.g., 120)"
     required: false
@@ -60,6 +74,25 @@ runs:
         KUSTOMIZE="${ARGOAPP}/kustomization.yaml"
         ARGOAPP="${ARGOAPP//_/-}"
         IMAGE_FULL="${REPO_FULL}:${{ inputs.tag }}"
+
+        HELM_PATH="${{ inputs.helm_tag_path }}"
+        POS="${{ inputs.source_position }}"
+        if [ -n "${HELM_PATH}" ]; then
+          if [ -n "${POS}" ]; then
+            SET_ARGS="--source-position ${POS} "
+            SOURCE_YQ=".spec.sources[$((POS - 1))]"
+          else
+            SOURCE_YQ=".spec.source"
+          fi
+          UNSET_ARGS="${SET_ARGS}--parameter ${HELM_PATH}"
+          SET_ARGS="${SET_ARGS}--helm-set ${HELM_PATH}=${{ inputs.tag }}"
+          echo "HELM_TAG_ENTRY=${KUSTOMIZE%/*}/application.yaml=${SOURCE_YQ}.helm.valuesObject.${HELM_PATH}" >> $GITHUB_ENV
+        else
+          SET_ARGS="--kustomize-image=${IMAGE_FULL}"
+          UNSET_ARGS="${SET_ARGS}"
+        fi
+        echo "SET_ARGS=${SET_ARGS}" >> $GITHUB_ENV
+        echo "UNSET_ARGS=${UNSET_ARGS}" >> $GITHUB_ENV
 
         echo "REPO_FULL=${REPO_FULL}" >> $GITHUB_ENV
         echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
@@ -96,7 +129,7 @@ runs:
         argocd --core app set ${{ env.ARGOAPP }} --sync-policy none
 
         echo "Setting image to ${{ env.IMAGE_FULL }}..."
-        argocd --core app set ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}"
+        argocd --core app set ${{ env.ARGOAPP }} ${SET_ARGS}
 
     - name: Sync ${{ env.IMAGE_FULL }}
       working-directory: deployments/k0s/apps
@@ -136,7 +169,8 @@ runs:
         # Through env, not inline: Actions substitutes expressions before bash
         # parses the script, so an apostrophe in a commit message broke the
         # quoting outright and a crafted one would run on the runner.
-        HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        HEAD_COMMIT_MESSAGE: ${{ inputs.commit_message || github.event.head_commit.message }}
+        EXTRA_TAG_PATHS: ${{ inputs.extra_tag_paths }}
         TRIGGER_ACTOR: ${{ github.actor }}
         SOURCE_REPO: ${{ github.event.repository.name }}
         SOURCE_RUN_NUMBER: ${{ github.run_number }}
@@ -146,17 +180,13 @@ runs:
         git config --global user.name "${{ inputs.git_user_name }}"
         git config --global user.email "${{ inputs.git_user_email }}"
 
-        yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"' -i ${{ env.KUSTOMIZE }}
-
-        echo "<details><summary>Manifest diff</summary>" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo '```diff' >> $GITHUB_STEP_SUMMARY
-        git diff -U0 >> $GITHUB_STEP_SUMMARY || true
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "</details>" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-
-        git add ${{ env.KUSTOMIZE }}
+        TAG_PATHS="${EXTRA_TAG_PATHS}"
+        if [ -n "${HELM_TAG_ENTRY:-}" ]; then
+          TAG_PATHS="${HELM_TAG_ENTRY}"$'\n'"${TAG_PATHS}"
+        else
+          yq eval '(.images[] | select(.name == "${{ env.REPO_FULL }}") | .newTag) = "${{ inputs.tag }}"' -i ${{ env.KUSTOMIZE }}
+          git add ${{ env.KUSTOMIZE }}
+        fi
 
         # Те же теги в местах, до которых kustomization не дотягивается.
         # Читаем обратно: yq на несуществующем пути молча создаст ветку или
@@ -186,7 +216,15 @@ runs:
           fi
           echo "extra tag set: ${file} ${path}"
           git add "${file}"
-        done <<< "${{ inputs.extra_tag_paths }}"
+        done <<< "${TAG_PATHS}"
+
+        echo "<details><summary>Manifest diff</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```diff' >> $GITHUB_STEP_SUMMARY
+        git diff --cached -U0 >> $GITHUB_STEP_SUMMARY || true
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "</details>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
 
         if git diff --cached --quiet; then
           echo "No changes to commit (tag already up to date)"
@@ -208,7 +246,7 @@ runs:
         echo "" >> $GITHUB_STEP_SUMMARY
 
         echo "Unsetting image..."
-        argocd --core app unset ${{ env.ARGOAPP }} --kustomize-image="${{ env.IMAGE_FULL }}" 2>&1 || true
+        argocd --core app unset ${{ env.ARGOAPP }} ${UNSET_ARGS} 2>&1 || true
 
         echo "Syncing back..."
         argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }} 2>&1 || true
