@@ -42,6 +42,9 @@ on:
       runs-on:
         type: string
         default: "htz-k0s"
+      no_cache:
+        type: boolean
+        default: false
     outputs:
       TAG:
         value: ${{ jobs.build.outputs.TAG }}
@@ -79,6 +82,7 @@ jobs:
           builder_image: ${{ steps.builder.outputs.image }}
           builder_dockerfile: ${{ inputs.builder_dockerfile }}
           builder_build_args: ${{ inputs.builder_build_args }}
+          no_cache: ${{ inputs.no_cache && 'true' || 'false' }}
 
   test:
     if: inputs.test != ''

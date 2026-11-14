@@ -50,6 +50,10 @@ inputs:
     description: "Additional build contexts (multiline, name=path)"
     required: false
     default: ""
+  no_cache:
+    description: "'true' rebuilds every layer (e.g. to pick up a new release of an unpinned dependency); the cache is still refreshed"
+    required: false
+    default: "false"
 
 outputs:
   REPO:
@@ -151,6 +155,7 @@ runs:
         tags: ${{ inputs.builder_image }}
         cache-from: type=registry,ref=${{ env.REPO }}:builder-cache
         cache-to: type=registry,ref=${{ env.REPO }}:builder-cache,mode=max
+        no-cache: ${{ inputs.no_cache == 'true' }}
         build-args: ${{ inputs.builder_build_args }}
 
     - name: create ${{ inputs.version_file }}
@@ -175,6 +180,7 @@ runs:
         build-contexts: ${{ inputs.build_contexts }}
         cache-from: type=registry,ref=${{ env.REPO }}:buildcache
         cache-to: type=registry,ref=${{ env.REPO }}:buildcache,mode=max
+        no-cache: ${{ inputs.no_cache == 'true' }}
         build-args: |
           BUILDER_IMAGE=${{ inputs.builder_image }}
           ${{ inputs.builder_build_args }}
