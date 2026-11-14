@@ -77,20 +77,22 @@ runs:
 
         HELM_PATH="${{ inputs.helm_tag_path }}"
         POS="${{ inputs.source_position }}"
+        # argocd v3 rejects every `app set` on a multi-source app without it, sync-policy too
+        SRC_ARGS="${POS:+--source-position ${POS}}"
         if [ -n "${HELM_PATH}" ]; then
           if [ -n "${POS}" ]; then
-            SET_ARGS="--source-position ${POS} "
             SOURCE_YQ=".spec.sources[$((POS - 1))]"
           else
             SOURCE_YQ=".spec.source"
           fi
-          UNSET_ARGS="${SET_ARGS}--parameter ${HELM_PATH}"
-          SET_ARGS="${SET_ARGS}--helm-set ${HELM_PATH}=${{ inputs.tag }}"
+          UNSET_ARGS="${SRC_ARGS} --parameter ${HELM_PATH}"
+          SET_ARGS="${SRC_ARGS} --helm-set ${HELM_PATH}=${{ inputs.tag }}"
           echo "HELM_TAG_ENTRY=${KUSTOMIZE%/*}/application.yaml=${SOURCE_YQ}.helm.valuesObject.${HELM_PATH}" >> $GITHUB_ENV
         else
           SET_ARGS="--kustomize-image=${IMAGE_FULL}"
           UNSET_ARGS="${SET_ARGS}"
         fi
+        echo "SRC_ARGS=${SRC_ARGS}" >> $GITHUB_ENV
         echo "SET_ARGS=${SET_ARGS}" >> $GITHUB_ENV
         echo "UNSET_ARGS=${UNSET_ARGS}" >> $GITHUB_ENV
 
@@ -126,7 +128,7 @@ runs:
       shell: bash
       run: |
         echo "Disabling auto-sync..."
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy none
+        argocd --core app set ${{ env.ARGOAPP }} ${SRC_ARGS} --sync-policy none
 
         echo "Setting image to ${{ env.IMAGE_FULL }}..."
         argocd --core app set ${{ env.ARGOAPP }} ${SET_ARGS}
@@ -160,7 +162,7 @@ runs:
       shell: bash
       run: |
         echo "Re-enabling auto-sync..."
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto
+        argocd --core app set ${{ env.ARGOAPP }} ${SRC_ARGS} --sync-policy auto
 
     - name: Commit manifest update
       working-directory: deployments/k0s/apps
@@ -252,7 +254,7 @@ runs:
         argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }} 2>&1 || true
 
         echo "Re-enabling auto-sync..."
-        argocd --core app set ${{ env.ARGOAPP }} --sync-policy auto 2>&1 || true
+        argocd --core app set ${{ env.ARGOAPP }} ${SRC_ARGS} --sync-policy auto 2>&1 || true
 
         echo "Waiting for rollback..."
         echo "<details><summary>Rollback output</summary>" >> $GITHUB_STEP_SUMMARY
