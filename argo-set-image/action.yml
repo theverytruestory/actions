@@ -178,15 +178,26 @@ runs:
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        # Healthy alone may describe the old template if something reverted the override
-        images=$(argocd --core app get ${{ env.ARGOAPP }} -o json | jq -r '.status.summary.images[]?')
-        echo "${images}"
-        if ! grep -qxF "${IMAGE_FULL}" <<< "${images}"; then
-          echo "::error::${IMAGE_FULL} is not among the app's live images"
-          exit 1
-        fi
-        if grep "^${REPO_FULL}:" <<< "${images}" | grep -vqxF "${IMAGE_FULL}"; then
-          echo "::error::another tag of ${REPO_FULL} is still live"
+        # Healthy alone may describe the old template if something reverted the override;
+        # check workload specs (pods linger while terminating) and wait for their rollout
+        workloads=$(argocd --core app get ${{ env.ARGOAPP }} -o json | jq -r \
+          '.status.resources[] | select(.kind == "Deployment" or .kind == "StatefulSet" or .kind == "DaemonSet") | "\(.namespace) \(.kind)/\(.name)"')
+        found=0
+        while read -r ns wl; do
+          [ -z "${ns}" ] && continue
+          images=$(kubectl get -n "${ns}" "${wl}" -o json | jq -r \
+            '.spec.template.spec | [.containers[]?, .initContainers[]?] | .[].image' | grep "^${REPO_FULL}[:@]" || true)
+          [ -z "${images}" ] && continue
+          echo "${ns} ${wl}: ${images//$'\n'/ }"
+          if grep -vqxF "${IMAGE_FULL}" <<< "${images}"; then
+            echo "::error::${ns} ${wl} does not run ${IMAGE_FULL}"
+            exit 1
+          fi
+          kubectl rollout status -n "${ns}" "${wl}" --timeout=${{ inputs.timeout }}s
+          found=$((found + 1))
+        done <<< "${workloads}"
+        if [ "${found}" -eq 0 ]; then
+          echo "::error::no workload of ${{ env.ARGOAPP }} uses ${REPO_FULL}"
           exit 1
         fi
 
