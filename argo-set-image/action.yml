@@ -104,13 +104,32 @@ runs:
         echo "**Image:** \`${IMAGE_FULL}\`" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
+    # truestory-infra GitHub App; key is put on runners by k0s/apps/github-actions
+    - name: GitHub App token (deployments, contents:write)
+      id: app-token
+      shell: bash
+      env:
+        APP_ID: "5753016"
+        INSTALLATION_ID: "181779909"
+        APP_KEY: /home/runner/.config/truestory-infra.pem
+      run: |
+        b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+        now=$(date +%s)
+        jwt="$(printf '{"alg":"RS256","typ":"JWT"}' | b64).$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' $((now - 60)) $((now + 540)) "${APP_ID}" | b64)"
+        jwt="${jwt}.$(printf %s "${jwt}" | openssl dgst -sha256 -sign "${APP_KEY}" | b64)"
+        token=$(curl -fsS -X POST -H "Authorization: Bearer ${jwt}" -H "Accept: application/vnd.github+json" \
+          -d '{"repositories":["deployments"],"permissions":{"contents":"write"}}' \
+          "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens" | jq -r .token)
+        echo "::add-mask::${token}"
+        echo "token=${token}" >> "$GITHUB_OUTPUT"
+
     - name: Checkout deployments
       uses: actions/checkout@v7
       with:
         ref: refs/heads/main
         show-progress: false
         repository: theverytruestory/deployments
-        ssh-key: ~/.ssh/id_ed25519
+        token: ${{ steps.app-token.outputs.token }}
         sparse-checkout: k0s/apps
         path: deployments
         fetch-depth: 1
@@ -275,3 +294,11 @@ runs:
         cat /tmp/before.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "No saved state" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+    - name: Revoke GitHub App token
+      if: always() && steps.app-token.outputs.token != ''
+      shell: bash
+      env:
+        TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        curl -fsS -X DELETE -H "Authorization: token ${TOKEN}" https://api.github.com/installation/token
