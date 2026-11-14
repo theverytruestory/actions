@@ -77,7 +77,7 @@ runs:
 
         HELM_PATH="${{ inputs.helm_tag_path }}"
         POS="${{ inputs.source_position }}"
-        # argocd v3 rejects every `app set` on a multi-source app without it, sync-policy too
+        # argocd v3 rejects `app set`/`unset` on a multi-source app without it
         SRC_ARGS="${POS:+--source-position ${POS}}"
         if [ -n "${HELM_PATH}" ]; then
           if [ -n "${POS}" ]; then
@@ -92,7 +92,6 @@ runs:
           SET_ARGS="--kustomize-image=${IMAGE_FULL}"
           UNSET_ARGS="${SET_ARGS}"
         fi
-        echo "SRC_ARGS=${SRC_ARGS}" >> $GITHUB_ENV
         echo "SET_ARGS=${SET_ARGS}" >> $GITHUB_ENV
         echo "UNSET_ARGS=${UNSET_ARGS}" >> $GITHUB_ENV
 
@@ -127,9 +126,8 @@ runs:
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        echo "Disabling auto-sync..."
-        argocd --core app set ${{ env.ARGOAPP }} ${SRC_ARGS} --sync-policy none
-
+        # sync policy stays as in git: toggling it made the child OutOfSync in app-of-apps,
+        # and any push to deployments mid-deploy reverted the override
         echo "Setting image to ${{ env.IMAGE_FULL }}..."
         argocd --core app set ${{ env.ARGOAPP }} ${SET_ARGS}
 
@@ -137,9 +135,9 @@ runs:
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        # Auto-sync is off: without this the health wait below sees the old pods
+        # without this the health wait below may see the old pods
         if ! argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}; then
-          # an auto-sync started before we disabled it: let it finish, then sync our image
+          # auto-sync picked up the override first: let it finish, then sync once more
           argocd --core app wait ${{ env.ARGOAPP }} --operation --timeout ${{ inputs.timeout }}
           argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }}
         fi
@@ -157,12 +155,21 @@ runs:
         echo "</details>" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-    - name: Re-enable auto-sync
+    - name: Verify ${{ env.IMAGE_FULL }} is live
       working-directory: deployments/k0s/apps
       shell: bash
       run: |
-        echo "Re-enabling auto-sync..."
-        argocd --core app set ${{ env.ARGOAPP }} ${SRC_ARGS} --sync-policy auto
+        # Healthy alone may describe the old template if something reverted the override
+        images=$(argocd --core app get ${{ env.ARGOAPP }} -o json | jq -r '.status.summary.images[]?')
+        echo "${images}"
+        if ! grep -qxF "${IMAGE_FULL}" <<< "${images}"; then
+          echo "::error::${IMAGE_FULL} is not among the app's live images"
+          exit 1
+        fi
+        if grep "^${REPO_FULL}:" <<< "${images}" | grep -vqxF "${IMAGE_FULL}"; then
+          echo "::error::another tag of ${REPO_FULL} is still live"
+          exit 1
+        fi
 
     - name: Commit manifest update
       working-directory: deployments/k0s/apps
@@ -252,9 +259,6 @@ runs:
 
         echo "Syncing back..."
         argocd --core app sync ${{ env.ARGOAPP }} --timeout ${{ inputs.timeout }} 2>&1 || true
-
-        echo "Re-enabling auto-sync..."
-        argocd --core app set ${{ env.ARGOAPP }} ${SRC_ARGS} --sync-policy auto 2>&1 || true
 
         echo "Waiting for rollback..."
         echo "<details><summary>Rollback output</summary>" >> $GITHUB_STEP_SUMMARY
